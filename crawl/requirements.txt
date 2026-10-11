@@ -1,5 +1,0 @@
-scrapy
-jsonlines
-jsonschema
-azure-storage-blob
-scrapy-impersonate

@@ -1,10 +1,10 @@
 resource "azurerm_resource_group" "tfstate" {
   name     = "stateResourceGroup"
-  location = "West US 2"
+  location = "East US 1"
 }
 
 resource "azurerm_storage_account" "storage_acc" {
-  name                     = "tfstatesall"
+  name                     = "tf-states"
   resource_group_name      = azurerm_resource_group.tfstate.name
   location                 = azurerm_resource_group.tfstate.location
   account_tier             = "Standard"
@@ -12,7 +12,7 @@ resource "azurerm_storage_account" "storage_acc" {
 }
 
 resource "azurerm_storage_container" "storage_container" {
-  name                  = "tfstates-storage"
+  name                  = "tf-states-storage"
   storage_account_name  = azurerm_storage_account.storage_acc.name
   container_access_type = "private"
 }

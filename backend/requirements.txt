@@ -1,0 +1,9 @@
+scrapy
+alembic
+psycopg2
+jsonlines
+jsonschema
+sqlalchemy
+azure-storage-blob
+scrapy-impersonate
+spidermon[monitoring]

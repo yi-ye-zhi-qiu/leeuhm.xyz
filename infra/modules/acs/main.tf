@@ -17,7 +17,7 @@ resource "azurerm_log_analytics_workspace" "logs" {
   location            = var.resource_group_location
   resource_group_name = var.resource_group_name
   sku                 = "PerGB2018" # This is the default value
-  retention_in_days   = 30 # Minimum value of options (30 - 730)
+  retention_in_days   = 30          # Minimum value of options (30 - 730)
 }
 
 resource "azurerm_container_group" "task" {
@@ -26,7 +26,7 @@ resource "azurerm_container_group" "task" {
   resource_group_name = var.resource_group_name
   os_type             = "Linux"
   network_profile_id  = var.network_profile_id
-  
+
   # Give permissions to read from ACR repository
   image_registry_credential {
     username = var.repository_login_username
@@ -37,7 +37,7 @@ resource "azurerm_container_group" "task" {
   # Create a log analytics workspace for containers
   diagnostics {
     log_analytics {
-     log_type      = "ContainerInsights"
+      log_type      = "ContainerInsights"
       workspace_id  = azurerm_log_analytics_workspace.logs.workspace_id
       workspace_key = azurerm_log_analytics_workspace.logs.primary_shared_key
       metadata      = {}
@@ -52,18 +52,17 @@ resource "azurerm_container_group" "task" {
   restart_policy = "OnFailure"
 
   container {
-    name                  = var.container_name
-    image                 = "${var.repository_login_server}/${var.image_name}:${var.image_tag}"
-    cpu                   = "0.5"
-    memory                = "1.5"
-    environment_variables = {      
-      "AZURE_CONTAINER"   = var.azure_storage_container      
+    name   = var.container_name
+    image  = "${var.repository_login_server}/${var.image_name}:${var.image_tag}"
+    cpu    = "0.5"
+    memory = "1.5"
+    environment_variables = {
+      "AZURE_CONTAINER"   = var.azure_storage_container
       "AZURE_ACCOUNT_URL" = "https://${var.azure_account_url}.blob.core.windows.net/"
       "AZURE_ACCOUNT_KEY" = var.azure_account_key
     }
-    # Run the shellscript in the `crawler` repository that triggers
-    # code to run.
-    commands              = ["sh", "run.sh"]
+    # Run the shellscript that triggers the code to run.
+    commands = ["sh", "run.sh"]
 
     # I am not sure why this is needed but else we get the error:
     # The ports in the 'ipAddress' of container group 'crawlerTaskDev' cannot be empty

@@ -1,0 +1,29 @@
+2026-08-31 13:01:10.827 PDT [78402] LOG:  starting PostgreSQL 14.20 (Homebrew) on aarch64-apple-darwin24.6.0, compiled by Apple clang version 17.0.0 (clang-1700.4.4.1), 64-bit
+2026-08-31 13:01:10.829 PDT [78402] LOG:  listening on IPv6 address "::1", port 5432
+2026-08-31 13:01:10.829 PDT [78402] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-08-31 13:01:10.829 PDT [78402] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2026-08-31 13:01:10.830 PDT [78403] LOG:  database system was shut down at 2026-08-31 13:00:56 PDT
+2026-08-31 13:01:10.833 PDT [78402] LOG:  database system is ready to accept connections
+2026-08-31 13:03:37.413 PDT [78402] LOG:  received fast shutdown request
+2026-08-31 13:03:37.413 PDT [78402] LOG:  aborting any active transactions
+2026-08-31 13:03:37.415 PDT [78402] LOG:  background worker "logical replication launcher" (PID 78409) exited with exit code 1
+2026-08-31 13:03:37.415 PDT [78404] LOG:  shutting down
+2026-08-31 13:03:37.421 PDT [78402] LOG:  database system is shut down
+2026-08-31 13:04:13.996 PDT [78615] LOG:  starting PostgreSQL 14.20 (Homebrew) on aarch64-apple-darwin24.6.0, compiled by Apple clang version 17.0.0 (clang-1700.4.4.1), 64-bit
+2026-08-31 13:04:13.997 PDT [78615] LOG:  listening on IPv6 address "::1", port 5432
+2026-08-31 13:04:13.997 PDT [78615] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-08-31 13:04:13.997 PDT [78615] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2026-08-31 13:04:13.999 PDT [78616] LOG:  database system was shut down at 2026-08-31 13:03:37 PDT
+2026-08-31 13:04:14.002 PDT [78615] LOG:  database system is ready to accept connections
+2026-08-31 13:04:15.685 PDT [78636] FATAL:  lock file "postmaster.pid" already exists
+2026-08-31 13:04:15.685 PDT [78636] HINT:  Is another postmaster (PID 78615) running in data directory "/Users/leum/pgsql/data"?
+2026-08-31 13:05:05.328 PDT [78681] FATAL:  database "leum" does not exist
+2026-08-31 13:05:22.073 PDT [78707] FATAL:  database "testdb" does not exist
+2026-08-31 13:05:32.490 PDT [78733] FATAL:  database "testdb" does not exist
+2026-08-31 13:06:25.054 PDT [78789] FATAL:  database "leum" does not exist
+2026-08-31 13:07:13.083 PDT [78825] FATAL:  database "leum" does not exist
+2026-08-31 13:54:39.440 PDT [78615] LOG:  received fast shutdown request
+2026-08-31 13:54:39.441 PDT [78615] LOG:  aborting any active transactions
+2026-08-31 13:54:39.444 PDT [78615] LOG:  background worker "logical replication launcher" (PID 78622) exited with exit code 1
+2026-08-31 13:54:39.444 PDT [78617] LOG:  shutting down
+2026-08-31 13:54:39.452 PDT [78615] LOG:  database system is shut down
