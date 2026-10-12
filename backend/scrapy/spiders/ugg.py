@@ -1,9 +1,13 @@
-from crawl.endpoints import Region, UGGLeaderboard, UGGMatchDetail, UGGMatchSummary
-from crawl.scrapy.items import LeaderboardItem, LeaderboardPlayerItem, MatchDetailItem
+from sqlalchemy import select
+
+from crawl.endpoints import Region, UGGMatchDetail, UGGMatch, UGGPlayer
 from scrapy import Spider
 from scrapy.http import JsonRequest, Response
 from typing import Iterable, Optional
 from scrapy.utils.reactor import is_asyncio_reactor_installed
+
+from endpoints import UGGMatch, UGGPlayer
+from schemas import Match, make_player_id
 
 
 class CrawlLeaderboard(Spider):
@@ -63,20 +67,17 @@ class CrawlLeaderboard(Spider):
             )
         super(CrawlLeaderboard, self).__init__(*args, **kwargs)
         self.region: Region = REGION
-        # Folder to partition by azure://data/euw/challenger/...
-        # in the case of a null value: ....../euw/None/...
-        self.feeds_partition = REGION
         self.n_leaderboard_pages = int(
-            N_LEADERBOARD_PAGES or 7500
-        )  # goes to bronze 1 about
+            N_LEADERBOARD_PAGES or 16043
+        )  # every page on U.GG for NA1
         self.n_leaderboard_pages_start_index = int(N_LEADERBOARD_PAGES_START_INDEX or 1)
         self.n_user_iter = int(N_USER_ITER or 1)
 
-    def start_requests(self) -> Iterable[JsonRequest]:
+    def start(self) -> Iterable[JsonRequest]:
         for page_index in range(
             self.n_leaderboard_pages_start_index, self.n_leaderboard_pages + 1
         ):
-            leaderboard = UGGLeaderboard()
+            leaderboard = UGGPlayer()
             req = JsonRequest(
                 url=leaderboard.url(),
                 data=leaderboard.payload(region=self.region, page_index=page_index),
@@ -85,35 +86,61 @@ class CrawlLeaderboard(Spider):
             )
             yield req
 
+    def errback_bin(self, failure):
+        self.logger.error(repr(failure))
+
     def parse_leaderboard(
         self, response: Response, page_index: int
     ) -> Iterable[JsonRequest]:
-        for player in players:
-            # TODO: should i yield an item instead?
-            UGGLeaderboard.insert(response)
+        UGGPlayer().insert(response=response, page_index=page_index)
+        for player in response.json()["data"]["leaderboardPages"]["players"]:
             for i in (1, self.n_user_iter):
-                if not check_if_match_already_crawled():
-                    matchsummary = UGGMatchSummary()
-                    yield JsonRequest(
-                        url=matchsummary.url(),
-                        callback=self.parse_match_summary,
-                        payload=matchsummary.payload(),
-                        errback=self.errback_bin,
-                    )
-
-    def parse_match_summary(self, response: Response, riot_user_name: str):
-        UGGMatchSummary.insert(response)
-        for game in games:
-            if not check_if_match_detail_already_crawled():
-                matchdetail = UGGMatchDetail()
+                match = UGGMatch()
                 yield JsonRequest(
-                    url=matchdetail.url(),
-                    payload=matchdetail.payload(),
-                    callback=self.parse_match_detail,
+                    url=match.url(),
+                    callback=self.parse_match_summary,
+                    payload=match.payload(
+                        region=self.region,
+                        riot_tag_line=player["riotTagLine"],
+                        riot_user_name=player["riotUserName"],
+                        page_index=i,
+                    ),
+                    errback=self.errback_bin,
+                    cb_kwargs={
+                        "riot_user_name": player["riotUserLine"],
+                        "riot_tag_line": player["riotTagLine"],
+                    },
                 )
 
-    def parse_match_detail(
-        self, response: Response, match_id: str
-    ) -> Iterable[MatchDetailItem]:
+    def parse_match_summary(
+        self, response: Response, riot_user_name: str, riot_tag_line: str
+    ):
+        UGGMatch().insert(response)
+        games = response.json()["data"]["fetchPlayerMatchSummaries"]["matchSummaries"]
+        self.logger.info(
+            "Got %d games for %s#%s", len(games), riot_user_name, riot_tag_line
+        )
+        for game in games:
+            if select(Match).where(
+                (Match.match_id == game["matchId"])
+                & (Match.player_id == make_player_id(riot_user_name, riot_tag_line))
+            ):
+                continue
+            match_detail = UGGMatchDetail(
+                riot_user_name=riot_user_name,
+                riot_tag_line=riot_tag_line,
+                version=game["version"],
+                match_id=game["matchId"],
+                region=self.region,
+            )
+            yield JsonRequest(
+                url=match_detail.url(),
+                payload=match_detail.payload(),
+                callback=self.parse_match_detail,
+                cb_kwargs={"match_id": game["matchId"], "match_detail": match_detail},
+            )
+
+    def parse_match_detail(self, response: Response, match_id: str) -> None:
         self.logger.info("Got match detail for %s", match_id)
-        yield UGGMatchDetail.insert(response)
+        match_detail.insert(response)
+        return

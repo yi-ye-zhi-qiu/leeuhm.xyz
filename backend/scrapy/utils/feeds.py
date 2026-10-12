@@ -1,14 +1,15 @@
 """Module containing feeds helpers"""
 
+import os
+import psycopg2
 from urllib.parse import urlparse
 from scrapy.crawler import Crawler
-from azure.storage.blob import BlobServiceClient
-
 from scrapy.extensions.feedexport import BlockingFeedStorage
 
 from typing import Any, IO
 from typing_extensions import Self
 
+# from azure.storage.blob import BlobServiceClient
 # NOTE: Not storing in Azure (data is structured). Storing straight in Postgres.
 # class AzureFeedStorage(BlockingFeedStorage):
 #     def __init__(
@@ -48,28 +49,31 @@ from typing_extensions import Self
 #         file.close()
 
 
-class PostgresBatchStorage(BlockingFeedStorage):
-    def __init__(self, uri: str, *, feed_options: dict[str, Any] | None):
-        u = urlparse(uri)
-        self.db = ...
-
-    @classmethod
-    def from_crawler(
-        cls, crawler: Crawler, uri: str, *, feed_options: dict[str, Any] | None
-    ) -> Self:
-        return cls(uri=uri, feed_options=feed_options)
-
-    def _store_in_thread(self, file: IO[bytes]) -> None:
-        file.seek(0)
-        with connection.cursor() as cursor:
-            psycopg2.extras.execute_batch(
-                cursor,
-                """
-                INSERT INTO "LeaderboardPlayerRanks VALUES (
-
-                )
-                """,
-                item["field1"],
-            )
-
-        file.close()
+# Inserts are done outside of Scrapy, it's a shared util.
+# class PostgresBatchStorage(BlockingFeedStorage):
+#     def __init__(self, uri: str, *, feed_options: dict[str, Any] | None):
+#         u = urlparse(uri)
+#         self.db = ...
+#
+#     @classmethod
+#     def from_crawler(
+#         cls, crawler: Crawler, uri: str, *, feed_options: dict[str, Any] | None
+#     ) -> Self:
+#         return cls(uri=uri, feed_options=feed_options)
+#
+#     def _store_in_thread(self, file: IO[bytes]) -> None:
+#         file.seek(0)
+#         connection = psycopg2.connect(os.environ["DATABASE_URL"])
+#         connection.autocommit = True
+#         with connection.cursor() as cursor:
+#             psycopg2.extras.execute_batch(
+#                 cursor,
+#                 """
+#                 INSERT INTO "LeaderboardPlayerRanks VALUES (
+#
+#                 )
+#                 """,
+#                 item["field1"],
+#             )
+#
+#         file.close()

@@ -1,6 +1,5 @@
 scrapy
 alembic
-psycopg2
 jsonlines
 jsonschema
 sqlalchemy
