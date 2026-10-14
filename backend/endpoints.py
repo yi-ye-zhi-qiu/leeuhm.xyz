@@ -85,6 +85,8 @@ class UGGPlayer:
                     summoner_level=player["summonerLevel"],
                     crawl_timestamp=now(),
                 )
+                # Player is a latest table
+                .on_conflict_do_update(index_elements=["player_id"])
             )
             execute_statement(stmt)
 

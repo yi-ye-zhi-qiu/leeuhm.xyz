@@ -1,27 +1,49 @@
-from _typeshed import AnnotationForm
+from contextlib import asynccontextmanager
 from typing import Annotated
 
 import requests
 from sqlalchemy import Sequence, select
 from sqlalchemy.orm import Session
-from db import db, execute_statement
-from fastapi import FastAPI, status, Depends, HTTPException
-from models import Base, Match, MatchDetail, Player, Region
+from db import db
+from fastapi import FastAPI, Depends, HTTPException
+from models import Match, MatchDetail, Player, Region
 from db import engine
-from ..endpoints import UGGMatchDetail, UGGMatch, UGGPlayer
+from ..endpoints import UGGMatchDetail, UGGMatch
 
-app = FastAPI()
 
-Base.metadata.create_all(bind=engine)
+# see: https://fastapi.tiangolo.com/advanced/events/
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Schema is managed by migrations (Alembic) not by app startup
+    yield
+    await engine.dispose()
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/search/{region}/{player_name}")
+async def search(
+    region: Region,
+    player_name: str,
+):
+    # TODO: Implement elastisearch to provide searchable user names
+    pass
 
 
 @app.get("/refresh/{region}/{player_id}")
-async def refresh(region: Region, player_id: str, page_index: int = 0, db: Annotated[Session, Depends(db)]):
-    """NOTE: this may fail, given it's an API request."""
+async def refresh(
+    region: Region,
+    player_id: str,
+    db: Annotated[Session, Depends(db)],
+    page_index: int = 0,
+):
+    # TODO: replace with Riot API
     stmt = select(Player.riot_tag_line, Player.riot_user_name).where(
-        (Player.player_id == player_id)
-        & (Player.region == region)
+        (Player.player_id == player_id) & (Player.region == region)
     )
+    result = db.execute(stmt)
+    breakpoint()
     rows: Sequence[Player] = db.execute(stmt)
     riot_user_name, riot_tag_line = rows[0]
     matches = requests.get(
@@ -36,7 +58,7 @@ async def refresh(region: Region, player_id: str, page_index: int = 0, db: Annot
     try:
         # derive latest match
         matches = response.json()["data"]["fetchPlayerMatchSummaries"]["matchSummaries"]
-        latest = matches[0]["matchId"]
+        latest_match_id = matches[0]["matchId"]
         # insert latest X match ids that do not already exist
         stmt: Sequence[Match] = select(Match).where(Match.match_id == latest_match_id)
         if db.execute(stmt):
@@ -49,14 +71,14 @@ async def refresh(region: Region, player_id: str, page_index: int = 0, db: Annot
                 match_id=match_id,
                 version=version,
                 riot_user_name=riot_user_name,
-                riot_tag_line=riot_tag_line
+                riot_tag_line=riot_tag_line,
             )
             requests.get(
                 url=match_detail.url(),
                 data=match_detail.payload(),
             )
     except requests.HTTPError:
-        raise HTTPException("refresh:%d", matches.status_code)
+        raise HTTPException(f"unsuccessful_refresh:{matches.status_code}")
 
 
 @app.get("/match/{player_id}", response_model=Sequence[Match])
@@ -76,8 +98,15 @@ async def match_detail(
 
 
 @app.get("/leaderboard/{region}/{page_index}", response_model=Sequence[Player])
-async def leaderboard(region: Region, page_index: int, db: Annotated[Session, Depends(db)]):
-    return db.execute(select(Player).where(Player.region == region).order_by("lp").limit(page_index * 100))
+async def leaderboard(
+    region: Region, page_index: int, db: Annotated[Session, Depends(db)]
+):
+    return db.execute(
+        select(Player)
+        .where(Player.region == region)
+        .order_by("lp")
+        .limit(page_index * 100)
+    )
 
 
 @app.get("/player/{player_id}", response_model=Player)

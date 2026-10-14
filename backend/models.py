@@ -125,10 +125,7 @@ def make_player_id(*args, riot_user_name: str, riot_tag_line: str):
 
 
 class Player(Base):
-    """This data is not "latest": it is player data by date."""
-
-    __tablename__ = "Leaderboard"
-    __table_args__ = (UniqueConstraint("player_id", "crawl_timestamp"),)
+    __tablename__ = "player"
 
     icon_id: Mapped[int]
     losses: Mapped[int]
@@ -138,9 +135,12 @@ class Player(Base):
     wins: Mapped[int]
     summoner_level: Mapped[int]
     region: Mapped[Region]
-    player_id: Mapped[str] = mapped_column(primary_key=True, unique=True, index=True)
-    # A player's summoner level, rank, etc. can change over time.
-    crawl_timestamp: Mapped[datetime] = mapped_column(insert_default=func.now())
+    # NOTE: A player's data can change over time. This table is just latest
+    # and is not snapshotted.
+    updated_at: Mapped[datetime] = mapped_column(
+        insert_default=func.now(), onupdate=func.now(), init=False
+    )
+    player_id: Mapped[str] = mapped_column(primary_key=True)
     # Riot, the company who owns League of Legends, tends to split `player_id`
     # into both a tag line (like #na1) and a user name. This determines uniqueness
     # and is what allows the same user name across multiple tags, or regions.
@@ -160,19 +160,15 @@ class Position:  # e.g. [{x: 603, y: 611}]
 class TimelineEvent(Base):
     __tablename__ = "timeline_event"
     __table_args__ = (
-        UniqueConstraint("match_id", "player_id"),
-        ForeignKeyConstraint(["match_id"], ["match.match_id"]),
+        ForeignKeyConstraint(
+            ["match_id", "player_id"],
+            ["match_detail.match_id", "match_detail.player_id"],
+        ),
     )
 
-    match_id: Mapped[str] = mapped_column(
-        ForeignKey("match.match_id"), primary_key=True, unique=True
-    )
-    player_id: Mapped[str] = mapped_column(
-        ForeignKey("match_detail.player_id"), ForeignKey("match.player_id"), unique=True
-    )
-    team_id: Mapped[Optional[TeamId]] = mapped_column(
-        ForeignKey("Team.team_id"), nullable=True, unique=True
-    )
+    match_id: Mapped[str] = mapped_column(primary_key=True)
+    player_id: Mapped[str] = mapped_column(primary_key=True)
+    team_id: Mapped[Optional[TeamId]] = mapped_column(nullable=True)
     event_type: Mapped[str]  # TODO: restrict to `ward_placed`, `champion_killed`, etc.
     assist_id: Mapped[Optional[int]]
     assist_riot_ids: Mapped[Optional[list[str]]]
@@ -187,12 +183,10 @@ class TimelineEvent(Base):
         mapped_column("position_x", nullable=True),
         mapped_column("position_y", nullable=True),
     )
-    timestamp: Mapped[int]
+    timestamp: Mapped[int] = mapped_column(primary_key=True)
     tower_type: Mapped[Optional[str]]  # TODO: notate with tower types
     victim_id: Mapped[Optional[str]]
-    victim_player_id: Mapped[str] = mapped_column(
-        ForeignKey("match_detail.player_id"), ForeignKey("match.player_id")
-    )
+    victim_player_id: Mapped[Optional[str]]
     ward_type: Mapped[Optional[str]]
 
     def __repr__(self) -> str:
@@ -211,20 +205,18 @@ class StatDelta(enum.Enum):
 class StatDeltaEvent(Base):
     __tablename__ = "stat_delta_event"
     __table_args__ = (
-        UniqueConstraint("match_id", "player_id"),
-        ForeignKeyConstraint(["match_id"], ["match.match_id"]),
+        ForeignKeyConstraint(
+            ["match_id", "player_id"],
+            ["match_detail.match_id", "match_detail.player_id"],
+        ),
     )
 
-    stat_type: Mapped[StatDelta]
+    stat_type: Mapped[StatDelta] = mapped_column(primary_key=True)
     opp_value: Mapped[int]
     player_value: Mapped[int]
-    timestamp: Mapped[int]
-    player_id: Mapped[str] = mapped_column(
-        ForeignKey("match.player_id"), primary_key=True, unique=True
-    )
-    match_id: Mapped[str] = mapped_column(
-        ForeignKey("match.match_id"), primary_key=True, Unique=True
-    )
+    timestamp: Mapped[int] = mapped_column(primary_key=True)
+    player_id: Mapped[str] = mapped_column(primary_key=True)
+    match_id: Mapped[str] = mapped_column(primary_key=True)
 
     def __repr__(self) -> str:
         return (
@@ -235,8 +227,10 @@ class StatDeltaEvent(Base):
 class MetricEvent(Base):
     __tablename__ = "metric_event"
     __table_args__ = (
-        UniqueConstraint("match_id", "player_id"),
-        ForeignKeyConstraint(["match_id"], ["match.match_id"]),
+        ForeignKeyConstraint(
+            ["match_id", "player_id"],
+            ["match_detail.match_id", "match_detail.player_id"],
+        ),
     )
 
     cs: Mapped[int]
@@ -247,25 +241,17 @@ class MetricEvent(Base):
         mapped_column("position_x", nullable=True),
         mapped_column("position_y", nullable=True),
     )
-    timestamp: Mapped[int]
+    timestamp: Mapped[int] = mapped_column(primary_key=True)
     total_damage_done_to_champions: Mapped[int]
     total_damage_taken: Mapped[int]
     total_gold: Mapped[int]
     xp: Mapped[int]
-    player_id: Mapped[str] = mapped_column(
-        ForeignKey("match.player_id"), primary_key=True, unique=True
-    )
-    match_id: Mapped[str] = mapped_column(
-        ForeignKey("match.match_id"), primary_key=True, unique=True
-    )
+    player_id: Mapped[str] = mapped_column(primary_key=True)
+    match_id: Mapped[str] = mapped_column(primary_key=True)
 
 
 class MatchDetail(Base):
     __tablename__ = "match_detail"
-    __table_args__ = (
-        UniqueConstraint("player_id", "match_id"),
-        ForeignKeyConstraint(["match_id"], ["match.match_id"]),
-    )
 
     assists: Mapped[int]
     augments: Mapped[list[int]]
@@ -281,14 +267,15 @@ class MatchDetail(Base):
     keystone: Mapped[int]
     kills: Mapped[int]
     level: Mapped[int]
-    player_id: Mapped[Player] = mapped_column(primary_key=True, unique=True, index=True)
+    player_id: Mapped[str] = mapped_column(
+        ForeignKey("player.player_id"), primary_key=True
+    )
     match_id: Mapped[str] = mapped_column(
-        ForeignKey("match.match_id"), unique=True, index=True
+        ForeignKey("match.match_id"), primary_key=True
     )
     role: Mapped[int]
     role_bound_item: Mapped[int]
     sub_style: Mapped[int]
-    summoner_spells: Mapped[list[int]]
     team_id: Mapped[TeamId]
     wards_placed: Mapped[int]
     maximum_kill_streak: Mapped[int]
@@ -306,6 +293,9 @@ class MatchDetail(Base):
     skill_path: Mapped[list[int]]
     stat_shards: Mapped[list[int]]
     summoner_spells: Mapped[list[int]]
+    timeline_events: Mapped[List[TimelineEvent]] = relationship(default_factory=list)
+    stat_delta_events: Mapped[List[StatDeltaEvent]] = relationship(default_factory=list)
+    metric_events: Mapped[List[MetricEvent]] = relationship(default_factory=list)
 
     def __repr__(self) -> str:
         return f"MatchDetail(player_id={self.player_id!r}, match_id={self.match_id!r})"
@@ -313,18 +303,11 @@ class MatchDetail(Base):
 
 class Team(Base):
     __tablename__ = "team"
-    __table_args__ = (
-        UniqueConstraint("match_id", "team_id"),
-        ForeignKeyConstraint(["match_id"], ["match.match_id"]),
-    )
 
-    team_id: Mapped[TeamId] = mapped_column(primary_key=True, unique=True)
+    team_id: Mapped[TeamId] = mapped_column(primary_key=True)
     match_id: Mapped[str] = mapped_column(
         ForeignKey("match.match_id"),
-        ForeignKey("match_detail.match_id"),
         primary_key=True,
-        unique=True,
-        index=True,
     )
     bans: Mapped[list[int]]
     baron_kills: Mapped[int]
@@ -340,27 +323,18 @@ class Team(Base):
 
 class Match(Base):
     __tablename__ = "match"
-    __table_args__ = UniqueConstraint("match_id")
+    # __table_args__ = (UniqueConstraint("match_id"),)
 
     match_creation_time: Mapped[int]
     match_duration_seconds: Mapped[int]
-    match_id: Mapped[str] = mapped_column(
-        ForeignKey("match_detail.match_id"),
-        ForeignKey("stat_delta_event.match_id"),
-        ForeignKey("timeline_event.match_id"),
-        primary_key=True,
-        unique=True,
-        index=True,
-    )
+    match_id: Mapped[str] = mapped_column(primary_key=True)
     # 1:m relationships, see: https://docs.sqlalchemy.org/en/21/orm/basic_relationships.html#one-to-many
     # possible forward ref, python 3.14+
-    team_ids: Mapped[List[Team]] = relationship()
-    player_ids: Mapped[List[MatchDetail]] = relationship()
-    timeline_events: Mapped[List[TimelineEvent]] = relationship()
-    stat_delta_events: Mapped[List[StatDeltaEvent]] = relationship()
     queue_type: Mapped[QueueType]
     region_id: Mapped[Region]
     version: Mapped[GameVersion]
+    team_ids: Mapped[List[Team]] = relationship()
+    player_ids: Mapped[List[MatchDetail]] = relationship()
 
     def __repr__(self) -> str:
         return f"Match(match_id={self.match_id!r})"

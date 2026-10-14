@@ -1,8 +1,0 @@
-scrapy
-alembic
-jsonlines
-jsonschema
-sqlalchemy
-azure-storage-blob
-scrapy-impersonate
-spidermon[monitoring]

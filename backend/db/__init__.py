@@ -1,27 +1,22 @@
-import os
-from sqlalchemy import URL, create_engine, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-# TODO: make it respect env.py
-url_object = URL.create(
-    "postgresql+pg8000",
-    username="dbuser",
-    password=os.environ["DB_PASSWORD"],
-    host="pghost10",
-    database="leeuhmgg",
+
+from ..config import settings
+
+engine = create_async_engine(settings.db_url)
+
+AsyncSessionLocal = async_sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False
 )
 
-engine = create_engine(url_object)
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def db():
-    with SessionLocal() as db:
+async def db():
+    async with AsyncSessionLocal() as db:
         yield db
 
 
-def execute_statement(statement: str):
-    with engine.connect() as connection:
+async def execute_statement(statement: str):
+    async with engine.connect() as connection:
         result = connection.execute(text(statement))
         return result
