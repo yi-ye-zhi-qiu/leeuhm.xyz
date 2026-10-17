@@ -1,0 +1,28 @@
+{# Template for messages sent on success or failure. #}
+
+{% set stats = data.spider.crawler.stats.get_stats() %}
+{% set items = stats.get('item_scraped_count', 0) %}
+{% set n_requests = stats.get('downloader/request_count', 0) %}
+{% set n_responses = stats.get('downloader/response_count', 0) %}
+{% set duration = stats.get('elapsed_time_seconds', 0) | round(2) %}
+{% set finish_reason = stats.get('finish_reason', 'unknown') %}
+{% set n_errors = stats.get('log_count/ERROR', 0) %}
+{% set n_exceptions = stats.get('spider_exceptions/count', 0) %}
+{% set summary = "(reason=%s, duration=%ss, writes=%s, requests=%s, responses=%s)" | format(finish_reason, duration, items, n_requests, n_responses) %}
+
+{% set problems = [] %}
+{% if finish_reason != 'finished' %}{% set _ = problems.append("finish reason was `%s`" | format(finish_reason)) %}{% endif %}
+{% if n_errors %}{% set _ = problems.append("%s ERROR log line(s)" | format(n_errors)) %}{% endif %}
+{% if n_exceptions %}{% set _ = problems.append("%s spider exception(s)" | format(n_exceptions)) %}{% endif %}
+{% for failed in result.monitors_failed_results %}
+{% set _ = problems.append("%s%s" | format(failed.monitor.name, ": " ~ failed.reason if failed.reason else "")) %}
+{% endfor %}
+
+{% if not problems %}
+:corn: `{{ data.spider.name }}` **success!** {{ summary }}
+{% else %}
+:jack_o_lantern: `{{ data.spider.name }}` **failure** {{ summary }}
+{% for problem in problems %}
+:x: {{ problem }}
+{% endfor %}
+{% endif %}

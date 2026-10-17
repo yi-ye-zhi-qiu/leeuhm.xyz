@@ -1,2 +1,3 @@
 class FailedRequest(Exception):
-    raise ValueError("invalid request")
+    def __init__(self, message: str = "invalid request"):
+        super().__init__(message)

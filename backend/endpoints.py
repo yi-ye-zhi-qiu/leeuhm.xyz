@@ -11,12 +11,26 @@ from typing import Any, Literal, Union
 from collections import namedtuple
 from urllib.parse import urlunparse
 
-from sqlalchemy import insert
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.sql.functions import now
 
-from .db import execute_statement
-from .exceptions import FailedRequest
-from .models import MetricEvent, Player, Match, MatchDetail, Region, StatDeltaEvent, Team, TeamId, TimelineEvent, make_player_id, make_team_id
+from db import AsyncSessionLocal
+from exceptions import FailedRequest
+from models import (
+    MetricEvent,
+    Player,
+    Match,
+    MatchDetail,
+    Rank,
+    Region,
+    StatDeltaEvent,
+    Team,
+    TeamId,
+    Tier,
+    TimelineEvent,
+    make_player_id,
+    make_team_id,
+)
 
 QUEUE_TYPE = 420  # 5v5 Summoner's rift
 SEASON_IDS = [25, 26]  # Most recent (31-Aug-2026 2 seasons)
@@ -25,6 +39,16 @@ URLComponents = namedtuple(
     typename="URLComponents",
     field_names=["scheme", "netloc", "path", "params", "query", "fragment"],
 )  # builder pattern
+
+
+def response_status(
+    response: Union[scrapy.http.Response, requests.Response],
+) -> Union[int, Exception]:
+    if isinstance(response, scrapy.http.Response):
+        return response.status
+    if isinstance(response, requests.Response):
+        return response.status_code
+    raise TypeError(f"unsupported response type: {type(response)!r}")
 
 
 class UGGPlayer:
@@ -48,47 +72,62 @@ class UGGPlayer:
             "variables": {
                 "page": page_index,
                 "queueType": QUEUE_TYPE,
-                "regionId": region,
+                "regionId": Region(region).value,
             },
             "query": "query getRankedLeaderboard($page: Int, $queueType: Int, $regionId: String!) {\n  leaderboardPage(page: $page, queueType: $queueType, regionId: $regionId) {\n    totalPlayerCount\n    topPlayerMostPlayedChamp\n    players {\n      iconId\n      losses\n      lp\n      overallRanking\n      rank\n      summonerLevel\n      riotTagLine\n      riotUserName\n      tier\n      wins\n      __typename\n    }\n    __typename\n  }\n}",
         }
 
-    def insert(
-        self, response: Union[scrapy.http.Response, requests.Response], page_index: int
+    async def insert(
+        self,
+        response: Union[scrapy.http.Response, requests.Response],
+        page_index: int,
+        region: Region,
     ) -> None:
-        if type(response) not in (scrapy.http.Response, requests.Response):
-            raise TypeError()
-        if type(response) == scrapy.http.Response:
-            status = response.status
-        if type(response) == requests.Response:
-            status = response.status_code
-        if status != 200:
+        if response_status(response) != 200:
             raise FailedRequest()
         players = response.json()["data"]["leaderboardPage"]["players"]
-        logging.info("Found %d players on %d", len(players), page_index)
+        logging.info("Found %d players on page index %d", len(players), page_index)
+        rows = []
         for player in players:
-            stmt = (
-                insert(Player)
-                .values(
-                    icon_id=player["iconId"],
-                    losses=int(player["losses"]),
-                    lp=str(player["lp"]),
-                    rank=player["rank"].lower(),
-                    tier=player["tier"].lower(),
-                    wins=player["wins"],
-                    player_id=make_player_id(
-                        riot_user_name=player["riot_user_name"],
-                        riot_tag_line=player["riot_tag_line"],
+            rows.append(
+                {
+                    "player_id": make_player_id(
+                        riot_user_name=player["riotUserName"],
+                        riot_tag_line=player["riotTagLine"],
                     ),
-                    riot_tag_line=player["riot_tag_line"],
-                    riot_user_name=player["riot_user_name"],
-                    summoner_level=player["summonerLevel"],
-                    crawl_timestamp=now(),
-                )
-                # Player is a latest table
-                .on_conflict_do_update(index_elements=["player_id"])
+                    "riot_user_name": player["riotUserName"],
+                    "riot_tag_line": player["riotTagLine"],
+                    "icon_id": player["iconId"],
+                    "losses": int(player["losses"]),
+                    "wins": int(player["wins"]),
+                    "lp": int(player["lp"]),
+                    "rank": Rank(player["rank"].lower()),
+                    "tier": Tier(player["tier"].lower()),
+                    "summoner_level": player["summonerLevel"],
+                    "region": Region(region),
+                }
             )
-            execute_statement(stmt)
+        # Player is a latest table
+        stmt = insert(Player)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["player_id"],
+            set_=dict(
+                icon_id=stmt.excluded["icon_id"],
+                losses=stmt.excluded["losses"],
+                lp=stmt.excluded["lp"],
+                rank=stmt.excluded["rank"],
+                tier=stmt.excluded["tier"],
+                wins=stmt.excluded["wins"],
+                summoner_level=stmt.excluded["summoner_level"],
+                region=stmt.excluded["region"],
+                updated_at=now(),
+            ),
+        )
+        # Batch insert is faster, see:
+        # https://stackoverflow.com/questions/3659142/bulk-insert-with-sqlalchemy-orm
+        # https://docs.sqlalchemy.org/en/21/orm/persistence_techniques.html#bulk-operations
+        async with AsyncSessionLocal.begin() as session:
+            await session.execute(stmt, rows)
 
 
 class UGGMatch:
@@ -112,7 +151,7 @@ class UGGMatch:
         return {
             "operationName": "FetchMatchSummaries",
             "variables": {
-                "regionId": region,
+                "regionId": Region(region).value,
                 "riotUserName": riot_user_name,
                 "riotTagLine": riot_tag_line,
                 "queueType": [],
@@ -130,13 +169,7 @@ class UGGMatch:
         self,
         response: Union[scrapy.http.Response, requests.Response],
     ) -> None:
-        if type(response) not in (scrapy.http.Response, requests.Response):
-            raise TypeError()
-        if type(response) == scrapy.http.Response:
-            status = response.status
-        if type(response) == requests.Response:
-            status = response.status_code
-        if status != 200:
+        if response_status(response) != 200:
             raise FailedRequest()
         matches = response.json()["data"]["fetchPlayerMatchSummaries"]["matchSummaries"]
         for match in matches:
@@ -144,22 +177,19 @@ class UGGMatch:
             for player in match["teamA"] + match["teamB"]:
                 player_ids.append(
                     make_player_id(
-                        riot_user_name=player["riot_user_name"],
-                        riot_tag_line=player["riot_tag_line"],
+                        riot_user_name=player["riotUserName"],
+                        riot_tag_line=player["riotTagLine"],
                     )
                 )
-            stmt = (
-                insert(Match)
-                .values(
-                    match_creation_time=match["matchCreationTime"],
-                    match_duration_seconds=match["matchDuration"],
-                    match_id=match["matchId"],
-                    team_ids=["100", "200"],
-                    player_ids=player_ids,
-                    queue_type=match["queueType"],
-                    region_id=match["regionId"],
-                    version=match["version"],
-                )
+            stmt = insert(Match).values(
+                match_creation_time=match["matchCreationTime"],
+                match_duration_seconds=match["matchDuration"],
+                match_id=match["matchId"],
+                team_ids=["100", "200"],
+                player_ids=player_ids,
+                queue_type=match["queueType"],
+                region_id=match["regionId"],
+                version=match["version"],
             )
             execute_statement(stmt)
 
@@ -177,7 +207,7 @@ class UGGMatchDetail:
         self.riot_tag_line = riot_tag_line
         self.match_id = match_id
         self.version = version
-        self.region = Region
+        self.region = Region(region)
 
     def url(self) -> str:
         return str(
@@ -188,7 +218,7 @@ class UGGMatchDetail:
                     path="/api",
                     params="",
                     query={},
-          fragment="",
+                    fragment="",
                 )
             )
         )
@@ -199,7 +229,7 @@ class UGGMatchDetail:
         return {
             "operationName": "match",
             "variables": {
-                "regionId": self.region,
+                "regionId": self.region.value,
                 "riotUserName": self.riot_user_name,
                 "riotTagLine": self.riot_tag_line,
                 "matchId": str(self.match_id),
@@ -209,13 +239,7 @@ class UGGMatchDetail:
         }
 
     def insert(self, response: Union[scrapy.http.Response, requests.Response]) -> None:
-        if type(response) not in (scrapy.http.Response, requests.Response):
-            raise TypeError()
-        if type(response) == scrapy.http.Response:
-            status = response.status
-        if type(response) == requests.Response:
-            status = response.status_code
-        if status != 200:
+        if response_status(response) != 200:
             raise FailedRequest()
         data = response.json()["data"]["match"]
         summary = data["matchSummary"]
@@ -269,7 +293,7 @@ class UGGMatchDetail:
             ),
             skill_path=data["historicalData"]["skillPath"],
             stat_shareds=data["historicalData"]["statShards"],
-            summoner_spells=summary["summonerSpells"]
+            summoner_spells=summary["summonerSpells"],
         )
         execute_statement(stmt)
         for timeline_event in data["historicalData"]["timelineData"]:
@@ -277,17 +301,17 @@ class UGGMatchDetail:
                 match_id=summary["matchId"],
                 player_id=make_player_id(
                     riot_tag_line=summary["riotTagLine"],
-                    riot_user_name=summary["riotUserName"]
+                    riot_user_name=summary["riotUserName"],
                 ),
                 team_id=make_team_id(timeline_event["teamId"]),
                 event_type=timeline_event["eventType"],
                 assist_id=timeline_event["assistPids"],
-                assist_riot_ids=timeline_event=timeline_event["assistRiotIds"],
+                assist_riot_ids=timeline_event["assistRiotIds"],
                 building_type=timeline_event["buildingType"],
                 killer_id=timeline_event["killerId"],
                 killer_ids=timeline_event["killerIds"],
                 lane_type=timeline_event["laneType"],
-                monster_subtype=timeline_eent["monsterSubtype"],
+                monster_subtype=timeline_event["monsterSubtype"],
                 monster_type=timeline_event["monsterType"],
                 pid=timeline_event["pid"],
                 position=timeline_event["position"],
@@ -296,7 +320,7 @@ class UGGMatchDetail:
                 victim_id=timeline_event["victimId"],
                 victim_player_id=make_player_id(
                     riot_tag_line=timeline_event["victimRiotTagLine"],
-                    riot_user_name=timeline_event["victimRiotUserName"]
+                    riot_user_name=timeline_event["victimRiotUserName"],
                 ),
                 ward_type=timeline_event["wardType"],
             )
@@ -305,7 +329,7 @@ class UGGMatchDetail:
             ("cs_difference", data["historicalData"]["csDifferenceFrames"]),
             ("ka_difference", data["historicalData"]["kaDifferenceFrames"]),
             ("gold_difference", data["historicalData"]["goldDifferenceFrames"]),
-            ("xp_difference", data["historicalData"]["xpDifferenceFrames"])
+            ("xp_difference", data["historicalData"]["xpDifferenceFrames"]),
         ]:
             stmt = insert(StatDeltaEvent).values(
                 stat_type=stat_type,
@@ -314,9 +338,9 @@ class UGGMatchDetail:
                 timestamp=stat_delta["timestamp"],
                 player_id=make_player_id(
                     riot_tag_line=summary["riotTagLine"],
-                    riot_user_name=summary["riotUserName"]
+                    riot_user_name=summary["riotUserName"],
                 ),
-                match_id=summary["matchId"]
+                match_id=summary["matchId"],
             )
             execute_statement(stmt)
         for metric_event in data["historicalData"]["metricsData"]:
@@ -328,13 +352,15 @@ class UGGMatchDetail:
                 position=metric_event["position"],
                 player_id=make_player_id(
                     riot_tag_line=metric_event["riotTagLine"],
-                    riot_user_name=metric_event["riotUserName"]
+                    riot_user_name=metric_event["riotUserName"],
                 ),
                 timestamp=metric_event["timestamp"],
-                total_damage_done_to_champions=metric_event["totalDamageDoneToChampions"],
+                total_damage_done_to_champions=metric_event[
+                    "totalDamageDoneToChampions"
+                ],
                 total_damage_taken=metric_event["total_damage_taken"],
                 total_gold=metric_event["totalGold"],
-                xp=metric_event["xp"]
+                xp=metric_event["xp"],
             )
             execute_statement(stmt)
         team_a = data["historicalData"]["teamOneOverview"]

@@ -323,7 +323,6 @@ class Team(Base):
 
 class Match(Base):
     __tablename__ = "match"
-    # __table_args__ = (UniqueConstraint("match_id"),)
 
     match_creation_time: Mapped[int]
     match_duration_seconds: Mapped[int]

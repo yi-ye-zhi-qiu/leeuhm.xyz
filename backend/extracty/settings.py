@@ -1,20 +1,17 @@
 import os
+from pathlib import Path
 
 LOG_LEVEL = "INFO"
 RETRY_ENABLED = False
 COOKIES_ENABLED = False
-SPIDER_MODULES = ["crawl.spiders"]
+SPIDER_MODULES = ["extracty.spiders"]
 CONCURRENT_REQUESTS = 128
 DOWNLOADER_MIDDLEWARES = {
-    "crawl.middlewares.Proxy": 100,
-    "crawl.middlewares.Impersonate": 200,
+    "extracty.middlewares.Proxy": 100,
+    "extracty.middlewares.Impersonate": 200,
 }
 ITEM_PIPELINES = {
-    "crawl.pipelines.RecordCrawledAt": 100,
-}
-EXTENSIONS = {
-    "scrapy.extensions.feedexport.FeedExporter": None,
-    "crawl.extensions.ImmediateFeedExporter": 0,
+    "extracty.pipelines.RecordCrawledAt": 100,
 }
 REQUEST_FINGERPRINTER_IMPLEMENTATION = "2.7"
 DOWNLOADER_CLIENT_TLS_METHOD = "TLSv1.2"
@@ -42,4 +39,24 @@ DEFAULT_REQUEST_HEADERS = {
     "X-App-Type": "web",
     "X-App-Version": "43fbbe7cce4c6e5ca7278597788eefbe02e91992",
 }
+EXTENSIONS = {
+    "spidermon.contrib.scrapy.extensions.Spidermon": 500,
+}
+SPIDERMON_ENABLED = True
 SPIDERMON_DISCORD_WEBHOOK_URL = os.environ["DISCORD_WEBHOOK_URL"]
+SPIDERMON_MAX_EXECUTION_TIME = 5 * 60  # 5 minutes
+SPIDERMON_MAX_ERRORS_PERIODIC = 100
+SPIDERMON_MAX_ERRORS = 100
+SPIDERMON_DISCORD_MESSAGE_TEMPLATE = str(
+    Path(__file__).parent / "discord-notification.jinja"
+)
+SPIDERMON_PERIODIC_MONITORS = {
+    # number of seconds between each monitoring check
+    "backend.extracty.monitors.PeriodicMonitorSuite": 60,
+}
+SPIDERMON_UNWANTED_HTTP_CODES = {
+    # Fail if there are more than `min(100, 0.1 * total_requests)` 403 responses (10%)
+    403: {"max_count": 100, "max_percentage": 0.1},
+}
+SPIDERMON_ITEM_COUNT_INCREASE = 1
+SPIDERMON_SPIDER_CLOSE_MONITORS = ("extracty.monitors.SpiderCloseMonitorSuite",)
