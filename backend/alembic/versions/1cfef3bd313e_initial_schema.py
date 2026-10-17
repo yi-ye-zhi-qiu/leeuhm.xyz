@@ -1,8 +1,8 @@
 """initial schema
 
-Revision ID: 4db016721453
+Revision ID: 1cfef3bd313e
 Revises: 
-Create Date: 2026-10-14 17:53:46.962631
+Create Date: 2026-10-17 14:57:08.124921
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '4db016721453'
+revision: str = '1cfef3bd313e'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -28,6 +28,7 @@ def upgrade() -> None:
     sa.Column('queue_type', sa.Enum('ranked_solo_5x5', name='queuetype'), nullable=False),
     sa.Column('region_id', sa.Enum('na', 'euw', 'kr', name='region'), nullable=False),
     sa.Column('version', sa.Enum('_16_20', '_16_19', '_16_18', '_16_17', '_16_16', '_16_15', '_16_14', '_16_13', '_16_12', '_16_11', '_16_10', '_16_09', '_16_08', '_16_07', '_16_06', '_16_05', '_16_04', '_16_03', '_16_02', '_16_01', name='gameversion'), nullable=False),
+    sa.Column('player_ids', sa.ARRAY(sa.String()), nullable=False),
     sa.PrimaryKeyConstraint('match_id')
     )
     op.create_table('player',
@@ -71,7 +72,7 @@ def upgrade() -> None:
     sa.Column('primary_style', sa.BIGINT(), nullable=False),
     sa.Column('ps_hard_carry', sa.BIGINT(), nullable=False),
     sa.Column('ps_team_play', sa.BIGINT(), nullable=False),
-    sa.Column('role_quest_completion', sa.BIGINT(), nullable=False),
+    sa.Column('role_quest_completion', sa.BIGINT(), nullable=True),
     sa.Column('runes', sa.ARRAY(sa.BIGINT()), nullable=False),
     sa.Column('vision_score', sa.BIGINT(), nullable=False),
     sa.Column('win', sa.Boolean(), nullable=False),
@@ -102,7 +103,7 @@ def upgrade() -> None:
     )
     op.create_table('metric_event',
     sa.Column('cs', sa.BIGINT(), nullable=False),
-    sa.Column('jungleCs', sa.BIGINT(), nullable=False),
+    sa.Column('jungle_cs', sa.BIGINT(), nullable=False),
     sa.Column('level', sa.BIGINT(), nullable=False),
     sa.Column('pid', sa.BIGINT(), nullable=False),
     sa.Column('position_x', sa.BIGINT(), nullable=True),
@@ -130,26 +131,27 @@ def upgrade() -> None:
     op.create_table('timeline_event',
     sa.Column('match_id', sa.String(), nullable=False),
     sa.Column('player_id', sa.String(), nullable=False),
+    sa.Column('event_index', sa.BIGINT(), nullable=False),
     sa.Column('team_id', sa.Enum('a', 'b', name='teamid'), nullable=True),
     sa.Column('event_type', sa.String(), nullable=False),
-    sa.Column('assist_id', sa.BIGINT(), nullable=True),
+    sa.Column('assist_ids', sa.ARRAY(sa.BIGINT()), nullable=True),
     sa.Column('assist_riot_ids', sa.ARRAY(sa.String()), nullable=True),
     sa.Column('building_type', sa.String(), nullable=True),
-    sa.Column('killer_id', sa.String(), nullable=True),
-    sa.Column('killer_ids', sa.ARRAY(sa.String()), nullable=True),
-    sa.Column('lane_type', sa.String(), nullable=False),
+    sa.Column('killer_id', sa.BIGINT(), nullable=True),
+    sa.Column('killer_ids', sa.ARRAY(sa.BIGINT()), nullable=True),
+    sa.Column('lane_type', sa.String(), nullable=True),
     sa.Column('monster_subtype', sa.String(), nullable=True),
     sa.Column('monster_type', sa.String(), nullable=True),
-    sa.Column('pid', sa.BIGINT(), nullable=False),
+    sa.Column('pid', sa.BIGINT(), nullable=True),
     sa.Column('position_x', sa.BIGINT(), nullable=True),
     sa.Column('position_y', sa.BIGINT(), nullable=True),
     sa.Column('timestamp', sa.BIGINT(), nullable=False),
     sa.Column('tower_type', sa.String(), nullable=True),
-    sa.Column('victim_id', sa.String(), nullable=True),
+    sa.Column('victim_id', sa.BIGINT(), nullable=True),
     sa.Column('victim_player_id', sa.String(), nullable=True),
     sa.Column('ward_type', sa.String(), nullable=True),
     sa.ForeignKeyConstraint(['match_id', 'player_id'], ['match_detail.match_id', 'match_detail.player_id'], ),
-    sa.PrimaryKeyConstraint('match_id', 'player_id', 'timestamp')
+    sa.PrimaryKeyConstraint('match_id', 'player_id', 'event_index')
     )
     # ### end Alembic commands ###
 

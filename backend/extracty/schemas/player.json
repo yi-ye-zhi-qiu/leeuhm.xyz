@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "u.gg getRankedLeaderboard response",
+  "description": "ensures u.gg response <> leeuhm.xyz DB compatibility",
+  "type": "object",
+  "required": ["data"],
+  "properties": {
+    "data": {
+      "type": "object",
+      "required": ["leaderboardPage"],
+      "properties": {
+        "leaderboardPage": {
+          "type": "object",
+          "required": ["totalPlayerCount", "players"],
+          "properties": {
+            "totalPlayerCount": { "type": "integer", "minimum": 0 },
+            "players": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/player" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "integerString": {
+      "description": "An integer, possibly sent as a string (e.g. \"563\"), as parsed by `int()`.",
+      "anyOf": [
+        { "type": "integer" },
+        { "type": "string", "pattern": "^[0-9]+$" }
+      ]
+    },
+    "player": {
+      "type": "object",
+      "required": [
+        "iconId",
+        "losses",
+        "wins",
+        "lp",
+        "rank",
+        "tier",
+        "summonerLevel",
+        "riotUserName",
+        "riotTagLine"
+      ],
+      "properties": {
+        "iconId": { "type": "integer" },
+        "losses": { "$ref": "#/$defs/integerString" },
+        "wins": { "$ref": "#/$defs/integerString" },
+        "lp": {
+          "anyOf": [{ "$ref": "#/$defs/integerString" }, { "type": "null" }]
+        },
+        "rank": {
+          "description": "`models.Rank`, case-insensitive.",
+          "enum": [
+            "i",
+            "ii",
+            "iii",
+            "iv",
+            "v",
+            "I",
+            "II",
+            "III",
+            "IV",
+            "V",
+            null
+          ]
+        },
+        "tier": {
+          "description": "`models.Tier`, case-insensitive.",
+          "enum": [
+            "challenger",
+            "grandmaster",
+            "master",
+            "diamond",
+            "emerald",
+            "platinum",
+            "gold",
+            "silver",
+            "bronze",
+            "iron",
+            "CHALLENGER",
+            "GRANDMASTER",
+            "MASTER",
+            "DIAMOND",
+            "EMERALD",
+            "PLATINUM",
+            "GOLD",
+            "SILVER",
+            "BRONZE",
+            "IRON",
+            null
+          ]
+        },
+        "summonerLevel": { "type": "integer" },
+        "riotUserName": { "type": "string" },
+        "riotTagLine": { "type": "string" }
+      }
+    }
+  }
+}

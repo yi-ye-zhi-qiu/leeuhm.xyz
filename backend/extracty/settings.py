@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+from extracty.items import UGGMatchDetailResponse, UGGMatchResponse, UGGPlayerResponse
+
 LOG_LEVEL = "INFO"
 RETRY_ENABLED = False
 COOKIES_ENABLED = False
@@ -12,6 +14,7 @@ DOWNLOADER_MIDDLEWARES = {
 }
 ITEM_PIPELINES = {
     "extracty.pipelines.RecordCrawledAt": 100,
+    "spidermon.contrib.scrapy.pipelines.ItemValidationPipeline": 800,
 }
 REQUEST_FINGERPRINTER_IMPLEMENTATION = "2.7"
 DOWNLOADER_CLIENT_TLS_METHOD = "TLSv1.2"
@@ -48,7 +51,7 @@ SPIDERMON_MAX_EXECUTION_TIME = 5 * 60  # 5 minutes
 SPIDERMON_MAX_ERRORS_PERIODIC = 100
 SPIDERMON_MAX_ERRORS = 100
 SPIDERMON_DISCORD_MESSAGE_TEMPLATE = str(
-    Path(__file__).parent / "discord-notification.jinja"
+    Path(__file__).parent / "discord_notification.jinja"
 )
 SPIDERMON_PERIODIC_MONITORS = {
     # number of seconds between each monitoring check
@@ -59,4 +62,11 @@ SPIDERMON_UNWANTED_HTTP_CODES = {
     403: {"max_count": 100, "max_percentage": 0.1},
 }
 SPIDERMON_ITEM_COUNT_INCREASE = 1
-SPIDERMON_SPIDER_CLOSE_MONITORS = ("extracty.monitors.SpiderCloseMonitorSuite",)
+SPIDERMON_VALIDATION_SCHEMAS = {
+    UGGPlayerResponse: str(Path(__file__).parent / "schemas" / "player.json"),
+    UGGMatchResponse: str(Path(__file__).parent / "schemas" / "match.json"),
+    UGGMatchDetailResponse: str(
+        Path(__file__).parent / "schemas" / "match_detail.json"
+    ),
+}
+SPIDERMON_SPIDER_CLOSE_MONITORS =("extracty.monitors.SpiderCloseMonitorSuite",)

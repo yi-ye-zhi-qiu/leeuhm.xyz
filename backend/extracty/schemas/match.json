@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "u.gg FetchMatchSummaries response",
+  "description": "ensures u.gg response <> leeuhm.xyz DB compatibility",
+  "type": "object",
+  "required": ["data"],
+  "properties": {
+    "data": {
+      "type": "object",
+      "required": ["fetchPlayerMatchSummaries"],
+      "properties": {
+        "fetchPlayerMatchSummaries": {
+          "type": "object",
+          "required": ["matchSummaries"],
+          "properties": {
+            "matchSummaries": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/matchSummary" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "matchSummary": {
+      "type": "object",
+      "required": [
+        "matchId",
+        "matchCreationTime",
+        "matchDuration",
+        "queueType",
+        "regionId",
+        "version",
+        "teamA",
+        "teamB"
+      ],
+      "properties": {
+        "matchId": { "type": ["integer", "string"] },
+        "matchCreationTime": { "type": "integer" },
+        "matchDuration": { "type": "integer" },
+        "queueType": {
+          "description": "`models.QueueType`.",
+          "enum": ["ranked_solo_5x5"]
+        },
+        "regionId": {
+          "description": "`models.Region`.",
+          "enum": ["na1", "euw", "kr"]
+        },
+        "version": {
+          "description": "Versions outside `models.GameVersion` are skipped, not rejected.",
+          "type": "string"
+        },
+        "teamA": { "type": "array", "items": { "$ref": "#/$defs/participant" } },
+        "teamB": { "type": "array", "items": { "$ref": "#/$defs/participant" } }
+      }
+    },
+    "participant": {
+      "description": "Parsed into `models.Match.player_ids`.",
+      "type": "object",
+      "required": ["riotUserName", "riotTagLine"],
+      "properties": {
+        "riotUserName": { "type": "string" },
+        "riotTagLine": { "type": "string" }
+      }
+    }
+  }
+}

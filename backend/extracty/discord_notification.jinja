@@ -8,7 +8,13 @@
 {% set finish_reason = stats.get('finish_reason', 'unknown') %}
 {% set n_errors = stats.get('log_count/ERROR', 0) %}
 {% set n_exceptions = stats.get('spider_exceptions/count', 0) %}
-{% set summary = "(reason=%s, duration=%ss, writes=%s, requests=%s, responses=%s)" | format(finish_reason, duration, items, n_requests, n_responses) %}
+{% set writes = stats.get('db/rows_written', 0) %}
+{% set writes_by_table = [] %}
+{% for key, value in stats | dictsort %}
+{% if key.startswith('db/rows_written/') %}{% set _ = writes_by_table.append("%s=%s" | format(key.split('/')[-1], value)) %}{% endif %}
+{% endfor %}
+{% set writes_detail = " (%s)" | format(writes_by_table | join(", ")) if writes_by_table else "" %}
+{% set summary = "(reason=%s, duration=%ss, writes=%s%s, items=%s, requests=%s, responses=%s)" | format(finish_reason, duration, writes, writes_detail, items, n_requests, n_responses) %}
 
 {% set problems = [] %}
 {% if finish_reason != 'finished' %}{% set _ = problems.append("finish reason was `%s`" | format(finish_reason)) %}{% endif %}

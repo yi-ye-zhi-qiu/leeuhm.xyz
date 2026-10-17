@@ -1,0 +1,309 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "u.gg match response",
+  "description": "ensures u.gg response <> leeuhm.xyz DB compatibility",
+  "type": "object",
+  "required": ["data"],
+  "properties": {
+    "data": {
+      "type": "object",
+      "required": ["match"],
+      "properties": {
+        "match": {
+          "type": "object",
+          "required": ["matchSummary", "historicalData", "performanceScore"],
+          "properties": {
+            "matchSummary": { "$ref": "#/$defs/matchSummary" },
+            "historicalData": { "$ref": "#/$defs/historicalData" },
+            "performanceScore": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/performanceScore" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "integers": { "type": "array", "items": { "type": "integer" } },
+    "nullableIntegers": {
+      "anyOf": [{ "$ref": "#/$defs/integers" }, { "type": "null" }]
+    },
+    "nullableInteger": { "type": ["integer", "null"] },
+    "nullableString": { "type": ["string", "null"] },
+    "teamId": {
+      "description": "Parsed by `models.make_team_id`.",
+      "enum": [100, 200]
+    },
+    "position": {
+      "description": "`models.Position`, only the first point is kept.",
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "properties": {
+          "x": { "$ref": "#/$defs/nullableInteger" },
+          "y": { "$ref": "#/$defs/nullableInteger" }
+        }
+      }
+    },
+    "riotId": {
+      "type": "object",
+      "required": ["riotUserName", "riotTagLine"],
+      "properties": {
+        "riotUserName": { "type": "string" },
+        "riotTagLine": { "type": "string" }
+      }
+    },
+    "matchSummary": {
+      "description": "The requested player's, parsed into `models.MatchDetail`.",
+      "allOf": [{ "$ref": "#/$defs/riotId" }],
+      "type": "object",
+      "required": [
+        "matchId",
+        "assists",
+        "augments",
+        "championId",
+        "cs",
+        "deaths",
+        "gold",
+        "items",
+        "jungleCs",
+        "killParticipation",
+        "kills",
+        "level",
+        "maximumKillStreak",
+        "primaryStyle",
+        "psHardCarry",
+        "psTeamPlay",
+        "role",
+        "roleBoundItem",
+        "roleQuestCompletion",
+        "runes",
+        "subStyle",
+        "summonerSpells",
+        "visionScore",
+        "win"
+      ],
+      "properties": {
+        "matchId": { "type": ["integer", "string"] },
+        "assists": { "type": "integer" },
+        "augments": { "$ref": "#/$defs/integers" },
+        "championId": { "type": "integer" },
+        "cs": { "type": "integer" },
+        "deaths": { "type": "integer" },
+        "gold": { "type": "integer" },
+        "items": { "$ref": "#/$defs/integers" },
+        "jungleCs": { "type": "integer" },
+        "killParticipation": { "type": "number" },
+        "kills": { "type": "integer" },
+        "level": { "type": "integer" },
+        "maximumKillStreak": { "type": "integer" },
+        "primaryStyle": { "type": "integer" },
+        "psHardCarry": { "type": "integer" },
+        "psTeamPlay": { "type": "integer" },
+        "role": { "type": "integer" },
+        "roleBoundItem": { "type": "integer" },
+        "roleQuestCompletion": { "$ref": "#/$defs/nullableInteger" },
+        "runes": { "$ref": "#/$defs/integers" },
+        "subStyle": { "type": "integer" },
+        "summonerSpells": { "$ref": "#/$defs/integers" },
+        "visionScore": { "type": "integer" },
+        "win": { "type": "boolean" }
+      }
+    },
+    "historicalData": {
+      "description": "The requested player's, except `postGameData`, `timelineData` and `metricsData` (all players).",
+      "type": "object",
+      "required": [
+        "skillPath",
+        "statShards",
+        "postGameData",
+        "teamOneOverview",
+        "teamTwoOverview",
+        "timelineData",
+        "csDifferenceFrames",
+        "kaDifferenceFrames",
+        "goldDifferenceFrames",
+        "xpDifferenceFrames",
+        "metricsData"
+      ],
+      "properties": {
+        "skillPath": { "$ref": "#/$defs/integers" },
+        "statShards": { "$ref": "#/$defs/integers" },
+        "postGameData": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/postGameData" }
+        },
+        "teamOneOverview": { "$ref": "#/$defs/teamOverview" },
+        "teamTwoOverview": { "$ref": "#/$defs/teamOverview" },
+        "timelineData": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/timelineEvent" }
+        },
+        "csDifferenceFrames": { "$ref": "#/$defs/differenceFrames" },
+        "kaDifferenceFrames": { "$ref": "#/$defs/differenceFrames" },
+        "goldDifferenceFrames": { "$ref": "#/$defs/differenceFrames" },
+        "xpDifferenceFrames": { "$ref": "#/$defs/differenceFrames" },
+        "metricsData": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/metricEvent" }
+        }
+      }
+    },
+    "postGameData": {
+      "description": "Parsed into `models.MatchDetail`, for the requested player.",
+      "allOf": [{ "$ref": "#/$defs/riotId" }],
+      "type": "object",
+      "required": [
+        "teamId",
+        "carryPercentage",
+        "damage",
+        "damageTaken",
+        "keystone",
+        "wardsPlaced"
+      ],
+      "properties": {
+        "teamId": { "$ref": "#/$defs/teamId" },
+        "carryPercentage": { "type": "number" },
+        "damage": { "type": "integer" },
+        "damageTaken": { "type": "integer" },
+        "keystone": { "type": "integer" },
+        "wardsPlaced": { "type": "integer" }
+      }
+    },
+    "performanceScore": {
+      "description": "Parsed into `models.MatchDetail`, for the requested player.",
+      "allOf": [{ "$ref": "#/$defs/riotId" }],
+      "type": "object",
+      "required": ["damageShareTotal", "finalLvlDiffTotal", "goldShareTotal"],
+      "properties": {
+        "damageShareTotal": { "type": "number" },
+        "finalLvlDiffTotal": { "type": "integer" },
+        "goldShareTotal": { "type": "number" }
+      }
+    },
+    "teamOverview": {
+      "description": "Parsed into `models.Team`.",
+      "type": "object",
+      "required": [
+        "bans",
+        "baronKills",
+        "dragonKills",
+        "gold",
+        "inhibitorKills",
+        "kills",
+        "riftHeraldKills",
+        "towerKills"
+      ],
+      "properties": {
+        "bans": { "$ref": "#/$defs/integers" },
+        "baronKills": { "type": "integer" },
+        "dragonKills": { "type": "integer" },
+        "gold": { "type": "integer" },
+        "inhibitorKills": { "type": "integer" },
+        "kills": { "type": "integer" },
+        "riftHeraldKills": { "type": "integer" },
+        "towerKills": { "type": "integer" }
+      }
+    },
+    "timelineEvent": {
+      "description": "Parsed into `models.TimelineEvent`, for the requested player.",
+      "allOf": [{ "$ref": "#/$defs/riotId" }],
+      "type": "object",
+      "required": [
+        "eventType",
+        "timestamp",
+        "teamId",
+        "assistPids",
+        "assistRiotIds",
+        "buildingType",
+        "killerId",
+        "killerIds",
+        "laneType",
+        "monsterSubtype",
+        "monsterType",
+        "pid",
+        "position",
+        "towerType",
+        "victimId",
+        "victimRiotUserName",
+        "victimRiotTagLine",
+        "wardType"
+      ],
+      "properties": {
+        "eventType": { "type": "string" },
+        "timestamp": { "type": "integer" },
+        "teamId": {
+          "anyOf": [{ "$ref": "#/$defs/teamId" }, { "type": "null" }]
+        },
+        "assistPids": { "$ref": "#/$defs/nullableIntegers" },
+        "assistRiotIds": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "object",
+            "required": ["username", "tagLine"],
+            "properties": {
+              "username": { "type": "string" },
+              "tagLine": { "type": "string" }
+            }
+          }
+        },
+        "buildingType": { "$ref": "#/$defs/nullableString" },
+        "killerId": { "$ref": "#/$defs/nullableInteger" },
+        "killerIds": { "$ref": "#/$defs/nullableIntegers" },
+        "laneType": { "$ref": "#/$defs/nullableString" },
+        "monsterSubtype": { "$ref": "#/$defs/nullableString" },
+        "monsterType": { "$ref": "#/$defs/nullableString" },
+        "pid": { "$ref": "#/$defs/nullableInteger" },
+        "position": { "$ref": "#/$defs/position" },
+        "towerType": { "$ref": "#/$defs/nullableString" },
+        "victimId": { "$ref": "#/$defs/nullableInteger" },
+        "victimRiotUserName": { "$ref": "#/$defs/nullableString" },
+        "victimRiotTagLine": { "$ref": "#/$defs/nullableString" },
+        "wardType": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "differenceFrames": {
+      "description": "Parsed into `models.StatDeltaEvent`.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["oppValue", "youValue", "timestamp"],
+        "properties": {
+          "oppValue": { "type": "integer" },
+          "youValue": { "type": "integer" },
+          "timestamp": { "type": "integer" }
+        }
+      }
+    },
+    "metricEvent": {
+      "description": "Parsed into `models.MetricEvent`, for the requested player.",
+      "allOf": [{ "$ref": "#/$defs/riotId" }],
+      "type": "object",
+      "required": [
+        "cs",
+        "jungleCs",
+        "level",
+        "pid",
+        "position",
+        "timestamp",
+        "totalDamageDoneToChampions",
+        "totalDamageTaken",
+        "totalGold",
+        "xp"
+      ],
+      "properties": {
+        "cs": { "type": "integer" },
+        "jungleCs": { "type": "integer" },
+        "level": { "type": "integer" },
+        "pid": { "type": "integer" },
+        "position": { "$ref": "#/$defs/position" },
+        "timestamp": { "type": "integer" },
+        "totalDamageDoneToChampions": { "type": "integer" },
+        "totalDamageTaken": { "type": "integer" },
+        "totalGold": { "type": "integer" },
+        "xp": { "type": "integer" }
+      }
+    }
+  }
+}
