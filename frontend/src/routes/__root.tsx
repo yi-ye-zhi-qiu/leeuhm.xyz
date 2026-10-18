@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Link, Outlet, createRootRoute } from "@tanstack/react-router";
 import { ThemeProvider, useTheme } from "../theme-context";
 
@@ -17,7 +16,7 @@ function ThemeToggle() {
 
 function RootComponent() {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="leeuhmxyz-ui-theme">
+    <ThemeProvider defaultTheme="dark" storageKey="espresso-gg-ui-theme">
       <nav>
         <Link to="/">home</Link>
         <Link to="/leaderboard" search={{ region: "na1", pageIndex: "1" }}>

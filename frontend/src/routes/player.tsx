@@ -6,7 +6,7 @@ export const Route = createFileRoute("/player")({
 });
 
 function PlayerData() {
-  const { playerId } = Route.useParams();
+  const { playerId } = Route.useSearch();
 
   const { isPending, error, data } = useQuery({
     queryKey: ["player", playerId],
@@ -22,15 +22,22 @@ function PlayerData() {
 
   return (
     <div>
-      <p>{data.userName}</p>
+      <p>
+        {data.riot_user_name}#{data.riot_tag_line}
+      </p>
     </div>
   );
 }
 
 function MatchData() {
+  const { playerId } = Route.useSearch();
+
   const { isPending, error, data } = useQuery({
-    queryKey: ["matchData"],
-    queryFn: () => fetch("/api/matchData").then((res) => res.json()),
+    queryKey: ["matches", playerId],
+    queryFn: () =>
+      fetch(`/api/match/${encodeURIComponent(playerId)}`).then((res) =>
+        res.json(),
+      ),
   });
 
   if (isPending) return "Loading...";
@@ -39,15 +46,35 @@ function MatchData() {
 
   return (
     <div>
-      <p>{data.length} matches from this player</p>
+      <p>{data.length} matches</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Match Id</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((match) => (
+            <tr key={match.match_id}>
+              {match.match_id}
+              <MatchDetail matchId={match.match_id} />
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-function MatchDetails() {
+function MatchDetail({ matchId }) {
+  const { playerId } = Route.useSearch();
+
   const { isPending, error, data } = useQuery({
-    queryKey: ["matchDetails"],
-    queryFn: () => fetch("/api/matchDetails").then((res) => res.json()),
+    queryKey: ["matchDetails", matchId, playerId],
+    queryFn: () =>
+      fetch(
+        `/api/match_detail/${matchId}/${encodeURIComponent(playerId)}`,
+      ).then((res) => res.json()),
   });
 
   if (isPending) return "Loading...";
@@ -56,7 +83,7 @@ function MatchDetails() {
 
   return (
     <div>
-      <p>match details here</p>
+      <p>match details: {JSON.stringify(data)}</p>
     </div>
   );
 }
@@ -66,7 +93,6 @@ function Player() {
     <>
       <PlayerData />
       <MatchData />
-      <MatchDetails />
     </>
   );
 }

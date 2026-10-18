@@ -8,7 +8,6 @@ from extracty.items import AssetItem
 
 
 class RecordCrawledAt:
-
     def process_item(self, item, spider):
         item["crawled_at"] = (
             datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -24,7 +23,7 @@ class CloudfareR2StorageConnector:
 
     So, this class kind of meshes those together.
 
-    Returns: e.g. `item/3158.png` in the `leeuhmxyz-assets` bucket.
+    Returns: e.g. `item/3158.png` in the `espresso-assets-dev` bucket.
     """
 
     def __init__(self, settings, stats):

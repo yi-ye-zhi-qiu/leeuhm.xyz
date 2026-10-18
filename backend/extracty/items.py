@@ -12,4 +12,4 @@ class UGGMatchDetailResponse(dict):
 
 class AssetItem(dict):
     """An image (`body`, downloaded from `url`) to store at `key`, e.g.
-    `item/3158.png`, see `AssetStorePipeline`."""
+    `item/3158.png`."""

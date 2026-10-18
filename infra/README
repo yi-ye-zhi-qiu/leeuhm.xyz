@@ -1,0 +1,10 @@
+Infrastructure as Code (IoC) configuration using Terraform.
+
+**Conventions/rules:**
+- File name must be one of: `main.tf`, `variables.tf`, `outputs.tf`, `provider.tf`, `locals.tf` or `data.tf`
+- Module name must be considered `this` if only used within file
+- Environment must be one of: `dev`, `prod`
+- Environment configuration must be in: `dev.tfvars`, `prod.tfvars`
+- Environment configuration files are never pushed to Github
+- Modules are "goldilocks" sized considering blast radius, i.e. a `network` module instead of an individual module per VPC, subnet, and container task
+- States are atomic and "goldilocks" sized considering blast radius, i.e. a state per spider instead of a monolithic state for all Terraform infrastructure

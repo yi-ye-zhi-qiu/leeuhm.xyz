@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/leaderboard")({
   component: Leaderboard,
@@ -35,10 +35,17 @@ function LeaderboardData() {
         <tbody>
           {data.items.map((player) => (
             <tr key={player.player_id}>
-              {/* TODO: Access CDN to render */}
-              <image src=`${player.icon_id}` />
               <td>
-                {player.riot_user_name}#{player.riot_tag_line}
+                <img
+                  src={`${import.meta.env.VITE_ASSETS_URL}/profile-icon/${player.icon_id}.jpg`}
+                  alt=""
+                  width={32}
+                  height={32}
+                  loading="lazy"
+                />
+                <Link to="/player" search={{ playerId: player.player_id }}>
+                  {player.riot_user_name}#{player.riot_tag_line}
+                </Link>
               </td>
               <td>{player.tier}</td>
               <td>{player.lp}</td>

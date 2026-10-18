@@ -3,7 +3,7 @@ import babel from "@rolldown/plugin-babel";
 import { defineConfig } from "vite";
 import { resolve } from "path";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
-import { tailwindcss } from "@tailwindcss/vite";
+import tailwindcss from "@tailwindcss/vite";
 
 // https://vite.dev/config/
 export default defineConfig({

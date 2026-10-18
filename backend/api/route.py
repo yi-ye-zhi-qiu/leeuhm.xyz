@@ -109,7 +109,6 @@ async def refresh(
 
 @app.get("/match/{player_id}", response_model=list[MatchSchema])
 async def match(player_id: str, session: Annotated[AsyncSession, Depends(db)]):
-    # Matches the player participated in, latest first
     return (
         await session.scalars(
             select(Match)

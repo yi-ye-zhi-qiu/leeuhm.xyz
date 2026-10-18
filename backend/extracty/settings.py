@@ -55,7 +55,7 @@ SPIDERMON_DISCORD_MESSAGE_TEMPLATE = str(
 )
 SPIDERMON_PERIODIC_MONITORS = {
     # number of seconds between each monitoring check
-    "backend.extracty.monitors.PeriodicMonitorSuite": 60,
+    "extracty.monitors.PeriodicMonitorSuite": 60,
 }
 SPIDERMON_UNWANTED_HTTP_CODES = {
     # Fail if there are more than `min(100, 0.1 * total_requests)` 403 responses (10%)
@@ -71,10 +71,9 @@ SPIDERMON_VALIDATION_SCHEMAS = {
 }
 SPIDERMON_SPIDER_CLOSE_MONITORS =("extracty.monitors.SpiderCloseMonitorSuite",)
 
-# Assets (see `CommunityDragonSpider`) are stored in Cloudflare R2, which is S3
-# compatible, see `infra/site_assets` and `AssetStorePipeline`.
-# `terraform output bucket_name` of `infra/site_assets`, per environment
-ASSETS_BUCKET = os.environ.get("ASSETS_BUCKET", "leeuhmxyz-assets-dev")
+# Assets (e.g. champion icons) are stored in Cloudflare R2, which is S3
+# compatible, in a bucket per environment
+ASSETS_BUCKET = os.environ.get("ASSETS_BUCKET", "espresso-assets-dev")
 # Store assets in a local directory instead, e.g. for testing
 ASSETS_LOCAL_DIR = os.environ.get("ASSETS_LOCAL_DIR")
 R2_ENDPOINT_URL = (

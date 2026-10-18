@@ -1,5 +1,5 @@
 variable "environment" {
-  description = "Deployment environment, part of resource names, e.g. `leeuhmxyz-assets-dev`."
+  description = "Deployment environment, part of resource names, e.g. `espresso-assets-dev`."
   type        = string
 
   validation {
@@ -20,13 +20,13 @@ variable "bucket_location" {
 }
 
 variable "custom_domain" {
-  description = "Public domain serving the bucket, e.g. `assets.leeuhm.xyz`. When null, the rate limited `r2.dev` domain is used instead (fine for dev, not for prod)."
+  description = "Public domain serving the bucket, e.g. `assets.espresso.gg`. When null, the rate limited `r2.dev` domain is used instead (fine for dev, not for prod)."
   type        = string
   default     = null
 }
 
 variable "zone_id" {
-  description = "Cloudflare zone ID of `custom_domain`'s DNS zone, e.g. `leeuhm.xyz`. Required with `custom_domain`."
+  description = "Cloudflare zone ID of `custom_domain`'s DNS zone, e.g. `espresso.gg`. Required with `custom_domain`."
   type        = string
   default     = null
 }
