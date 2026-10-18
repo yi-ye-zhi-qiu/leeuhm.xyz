@@ -26,6 +26,8 @@ def crawl():
     yield process.crawl("player-spider", N_LEADERBOARD_PAGES=1)
     yield process.crawl("match-spider", N_GAMES_PER_PLAYER=1)
     yield process.crawl("match-detail-spider")
+    # Optionally, refresh site assets
+    # yield process.crawl("community-dragon-spider")
     process.stop()
 
 

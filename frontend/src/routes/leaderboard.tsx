@@ -35,6 +35,8 @@ function LeaderboardData() {
         <tbody>
           {data.items.map((player) => (
             <tr key={player.player_id}>
+              {/* TODO: Access CDN to render */}
+              <image src=`${player.icon_id}` />
               <td>
                 {player.riot_user_name}#{player.riot_tag_line}
               </td>
