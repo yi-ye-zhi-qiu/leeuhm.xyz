@@ -2,15 +2,9 @@
 # for champion images, skill icons, etc.
 # https://github.com/CommunityDragon/Docs/blob/master/assets.md
 #
-# Assets are stored in Cloudflare R2 at
-# `{asset_type}/{id}.{ext}`, with the ids we store in Postgres, e.g.
-# `item/3158.png` for `MatchDetail.items`.
+# That data is not organized, so we make it organized like this:
 #
-# File names don't contain our ids
-# (e.g. `034_steel_shield.project_jade.png`), CommunityDragon's JSON data files
-# map ids to files instead, e.g. `v1/items.json`.
-#
-# | R2 key                       | Postgres                                      |
+# | Asset store (Cloudflare R2)  | Postgres                                      |
 # | ---------------------------- | --------------------------------------------- |
 # | profile-icon/{id}.jpg        | Player.icon_id                                |
 # | champion/{id}.png            | MatchDetail.champion_id, Team.bans            |
@@ -24,33 +18,25 @@
 # | role/{role}.png              | MatchDetail.role                              |
 # | monster/{monster}.png        | TimelineEvent.monster_subtype or monster_type |
 
+
+from scrapy import Request
 from pathlib import PurePosixPath
-
-from scrapy.http import JsonRequest, Response
 from scrapy.spiders import Spider
+from scrapy.http import JsonRequest, Response
+
 from extracty.items import AssetItem
-from schemas import Tier
-
-
-def asset(keys: str | list[str], url: str) -> AssetItem:
-    """An asset of `keys`, with the source's file extension, e.g. `item/3158` and
-    `.png`. Several keys when ids share a file (e.g. Flash is summoner spells 4,
-    2202 and 2203), as it's only downloaded once per crawl."""
-    keys = [keys] if isinstance(keys, str) else keys
-    suffix = PurePosixPath(url).suffix
-    return AssetItem(keys=[f"{key}{suffix}" for key in keys], file_urls=[url])
 
 
 class CommunityDragonSpider(Spider):
     name = "community-dragon-spider"
     _version = "latest"
-    domain = f"https://raw.communitydragon.org/{_version}/"
+    domain = f"https://raw.communitydragon.org/{_version}"
     public = f"{domain}/plugins/rcp-be-lol-game-data/global/default"
     custom_settings = {
         "DOWNLOADER_MIDDLEWARES": {"extracty.middlewares.Impersonate": 200},
         "DEFAULT_REQUEST_HEADERS": {"Accept": "*/*"},
         "CONCURRENT_REQUESTS": 32,
-        "ITEM_PIPELINES": {"extracty.pipelines.AssetFilesPipeline": 1},
+        "ITEM_PIPELINES": {"extracty.pipelines.CloudfareR2StorageConnector": 1},
     }
 
     async def start(self):
@@ -76,25 +62,35 @@ class CommunityDragonSpider(Spider):
             "iron",
             "unranked",
         ]:
-            yield asset(
-                f"rank-mini/{tier}",
-                f"{self.public}/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-mini-crests/{tier}.svg",
+            # e.g. .../ranked-mini-crests/challenger.svg -> rank-mini/challenger.svg,
+            # only SVGs exist for every tier (there's no emerald.png)
+            yield Request(
+                f"{self.domain}/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-mini-crests/{tier}.svg",
+                callback=self.parse,
+                cb_kwargs={"key": f"rank-mini/{tier}"},
             )
-            yield asset(
-                f"rank-emblem/{tier}",
-                f"{self.public}/plugins/rcp-fe-lol-shared-components/global/default/images/{tier}.png",
+            # e.g. .../images/challenger.png -> rank-emblem/challenger.png
+            yield Request(
+                f"{self.domain}/plugins/rcp-fe-lol-shared-components/global/default/images/{tier}.png",
+                callback=self.parse,
+                cb_kwargs={"key": f"rank-emblem/{tier}"},
             )
+        # u.gg's `MatchDetail.role`, e.g. icon-position-jungle.png -> role/1.png
         for role, position in {
             1: "jungle",
-            2: "support",
+            2: "utility",  # i.e. support
             3: "bottom",
             4: "top",
             5: "middle",
         }.items():
-            yield asset(
-                f"role/{role}",
-                f"{self.public}/plugins/rcp-fe-lol-clash/global/defautls/assets/image/positions/icon-position-{position}.png",
+            yield Request(
+                f"{self.domain}/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-{position}.png",
+                callback=self.parse,
+                cb_kwargs={"key": f"role/{role}"},
             )
+        # `TimelineEvent.monster_subtype` (dragons) or `monster_type` (others),
+        # e.g. dragon_square_water.png -> monster/water_dragon.png. There's no
+        # pattern to these file names.
         for monster, path in {
             "air_dragon": "sru_dragon_air/hud/dragon_air_square.png",
             "chemtech_dragon": "sru_dragon_chemtech/hud/icons2d/dragon_square_chemtech.png",
@@ -104,21 +100,29 @@ class CommunityDragonSpider(Spider):
             "water_dragon": "sru_dragon_water/hud/dragon_square_water.png",
             "elder_dragon": "sru_dragon_elder/hud/dragon_square_elder.png",
             "baron_nashor": "sru_baron/hud/baron_square.png",
+            "riftherald": "sru_riftherald/hud/sruriftherald_square.png",
             "horde": "sru_horde/hud/sru_voidgrub_square.png",
         }.items():
-            yield asset(
-                f"monster/{monster}", f"{self.public}/game/assets/characters/{path}"
+            yield Request(
+                f"{self.domain}/game/assets/characters/{path}",
+                callback=self.parse,
+                cb_kwargs={"key": f"monster/{monster}"},
             )
 
     def parse_champion_summary(self, response: Response):
+        # e.g. {"id": 75, "alias": "Nasus",
+        #       "squarePortraitPath": "/lol-game-data/assets/v1/champion-icons/75.png"}
+        #   -> champion/75.png, and v1/champions/75.json for its abilities
         for champion in response.json():
             # Game mode variants, e.g. 60001 is `Jade_Annie`, aren't in ranked
             if champion["id"] >= 10_000:
                 continue
             # -1 is "no champion", e.g. no ban
-            yield asset(
-                f"champion/{champion['id']}",
-                game_data_url(champion["squarePortraitPath"]),
+            path = champion["squarePortraitPath"].removeprefix("/lol-game-data/assets/")
+            yield Request(
+                f"{self.public}/{path.lower()}",
+                callback=self.parse,
+                cb_kwargs={"key": f"champion/{champion['id']}"},
             )
             if champion["id"] != -1:
                 yield JsonRequest(
@@ -127,16 +131,22 @@ class CommunityDragonSpider(Spider):
                 )
 
     def parse_champion(self, response: Response):
+        # e.g. {"id": 75,
+        #       "passive": {"abilityIconPath": ".../Nasus/HUD/Icons2D/Nasus_Passive.png"},
+        #       "spells": [{"spellKey": "q", "abilityIconPath": ".../Nasus_Q.png"}, ...]}
+        #   -> champion-ability/75/0.png (passive), champion-ability/75/1.png (q), ...
+        # matching `MatchDetail.skill_path`, e.g. [1, 2, 3, 1, ...] is q, w, e, q
         champion = response.json()
-        yield asset(
-            f"champion-ability/{champion['id']}/0",
-            game_data_url(champion["passive"]["abilityIconPath"]),
-        )
+        abilities = [("0", champion["passive"])]
+        skill_translation_tbl = {"q": "1", "w": "2", "e": "3", "r": "4"}
         for spell in champion["spells"]:
-            skill_translation_tbl = {"q": 1, "w": 2, "e": 3, "r": 4}
-            yield asset(
-                f"champion-ability/{champion['id']}/{skill_translation_tbl[spell['spellKey']]}",
-                game_data_url(spell["abilityIconPath"]),
+            abilities.append((skill_translation_tbl[spell["spellKey"]], spell))
+        for slot, ability in abilities:
+            path = ability["abilityIconPath"].removeprefix("/lol-game-data/assets/")
+            yield Request(
+                f"{self.public}/{path.lower()}",
+                callback=self.parse,
+                cb_kwargs={"key": f"champion-ability/{champion['id']}/{slot}"},
             )
 
     def parse_items(self, response: Response):
@@ -155,17 +165,31 @@ class CommunityDragonSpider(Spider):
         yield from self.parse_icons(response.json(), "profile-icon")
 
     def parse_icons(self, entries: list[dict], asset_type: str):
-        """`{asset_type}/{id}` from `id` and `iconPath`, which some lack."""
-        keys_by_url: dict[str, list[str]] = {}
-        # AI: give examples here please
+        # e.g. an `items.json` entry
+        #   {"id": 1001, "name": "Boots",
+        #    "iconPath": "/lol-game-data/assets/ASSETS/Items/Icons2D/1001_Class_T1_BootsofSpeed.png"}
+        # is downloaded from
+        #   {public}/assets/items/icons2d/1001_class_t1_bootsofspeed.png
+        # and stored at `item/1001.png`
         for entry in entries:
             if not entry.get("iconPath"):
+                # e.g. 86 profile icons, `{"id": 29, "iconPath": None}`
                 self.crawler.stats.inc_value(f"assets/missing_icon/{asset_type}")
                 continue
-            p = entry["iconPath"]
-            p = p.removeprefix("/lol-game-data/assets/")
-            p = p.lower()
-            url = f"{self.public}/{p}"
-            keys_by_url.setdefault(url, []).append(f"{asset_type}/{entry['id']}")
-        for url, keys in keys_by_url.items():
-            yield asset(keys, url)
+            path = entry["iconPath"].removeprefix("/lol-game-data/assets/")
+            yield Request(
+                f"{self.public}/{path.lower()}",
+                callback=self.parse,
+                cb_kwargs={"key": f"{asset_type}/{entry['id']}"},
+                # Ids can share a file, e.g. Flash is summoner spells 4, 2202
+                # and 2203, which is then downloaded for each
+                dont_filter=True,
+            )
+
+    def parse(self, response: Response, key: str):
+        # The file's extension, e.g. `item/1001` and `.png` is `item/1001.png`
+        yield AssetItem(
+            key=f"{key}{PurePosixPath(response.url).suffix}",
+            url=response.url,
+            body=response.body,
+        )

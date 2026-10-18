@@ -72,17 +72,15 @@ SPIDERMON_VALIDATION_SCHEMAS = {
 SPIDERMON_SPIDER_CLOSE_MONITORS =("extracty.monitors.SpiderCloseMonitorSuite",)
 
 # Assets (see `CommunityDragonSpider`) are stored in Cloudflare R2, which is S3
-# compatible, see `infra/site_assets`. `ASSETS_FILES_STORE` can instead be a
-# local directory, e.g. for testing.
-FILES_STORE = os.environ.get("ASSETS_FILES_STORE", "s3://leeuhmxyz-assets/")
-AWS_ENDPOINT_URL = (
+# compatible, see `infra/site_assets` and `AssetStorePipeline`.
+# `terraform output bucket_name` of `infra/site_assets`, per environment
+ASSETS_BUCKET = os.environ.get("ASSETS_BUCKET", "leeuhmxyz-assets-dev")
+# Store assets in a local directory instead, e.g. for testing
+ASSETS_LOCAL_DIR = os.environ.get("ASSETS_LOCAL_DIR")
+R2_ENDPOINT_URL = (
     f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com"
     if "R2_ACCOUNT_ID" in os.environ
     else None
 )
-AWS_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
-AWS_REGION_NAME = "auto"
-# Always re-download assets (~7k, in seconds): the "up to date" check only
-# covers an `AssetItem`'s first key, not others sharing its file
-FILES_EXPIRES = 0
+R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
+R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")

@@ -1,0 +1,5 @@
+Site assets are like images. They are stored in Cloudfare R2.
+
+**Alternatives considered:**
+- AWS S3 (did not go with, as more expensive on egress);
+- Postgres (it's taboo to store images in a database)

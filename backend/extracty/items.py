@@ -11,8 +11,5 @@ class UGGMatchDetailResponse(dict):
 
 
 class AssetItem(dict):
-    """An image to store at `keys` (e.g. `["item/3158.png"]`, several when ids
-    share an image), see `AssetFilesPipeline`.
-
-    `file_urls` (a single source URL) and `files` are `FilesPipeline` fields.
-    """
+    """An image (`body`, downloaded from `url`) to store at `key`, e.g.
+    `item/3158.png`, see `AssetStorePipeline`."""
