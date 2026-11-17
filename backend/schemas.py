@@ -29,6 +29,12 @@ def make_team_id(team_id: str) -> TeamId:
 # League of Legends' matches are of a few types.
 class QueueType(enum.Enum):
     ranked_solo_5x5 = "ranked_solo_5x5"
+    normal_draft_5x5 = "normal_draft_5x5"
+    aram_5x5 = "aram_5x5"
+    blind_5x5 = "blind_5x5"
+    ranked_flex_5x5 = "ranked_flex_5x5"
+    ranked_flex_sr = "ranked_flex_sr"
+    normal_aram = "normal_aram"
 
 
 # Compatible, desired game versions.

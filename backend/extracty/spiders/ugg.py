@@ -124,11 +124,11 @@ class MatchSpider(Spider):
         async with AsyncSessionLocal.begin() as session:
             players = (
                 await session.execute(
-                    select(Player.riot_tag_line, Player.riot_user_name, Player.region)
-                    .where(
+                    select(
+                        Player.riot_tag_line, Player.riot_user_name, Player.region
+                    ).where(
                         Player.player_id == self.player_id if self.player_id else True
                     )
-                    .limit(2)
                 )
             ).all()
         self.logger.info("Found %d players", len(players))
