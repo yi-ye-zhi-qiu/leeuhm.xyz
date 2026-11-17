@@ -35,10 +35,13 @@ class QueueType(enum.Enum):
     ranked_flex_5x5 = "ranked_flex_5x5"
     ranked_flex_sr = "ranked_flex_sr"
     normal_aram = "normal_aram"
+    swiftplay = "swiftplay"
 
 
 # Compatible, desired game versions.
 class GameVersion(enum.Enum):
+    _16_22 = "16_22"
+    _16_21 = "16_21"
     _16_20 = "16_20"
     _16_19 = "16_19"
     _16_18 = "16_18"

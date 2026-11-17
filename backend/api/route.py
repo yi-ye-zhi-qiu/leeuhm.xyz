@@ -27,8 +27,6 @@ from schemas import (
     Region,
 )
 
-LEADERBOARD_PAGE_SIZE = 100
-
 
 # see: https://fastapi.tiangolo.com/advanced/events/
 # Lifespan is a modern way in FastAPI to handle startup and shutdown
@@ -116,22 +114,34 @@ async def refresh(
         )
 
 
-@app.get("/match/{player_id}", response_model=list[MatchSchema])
-async def match(player_id: str, session: Annotated[AsyncSession, Depends(db)]):
+@app.get("/match/{player_id}/{page_index}", response_model=list[MatchSchema])
+async def match(
+    player_id: str,
+    session: Annotated[AsyncSession, Depends(db)],
+    page_index: Annotated[int, Path(ge=1)],
+):
+    page_size = 20
     return (
         await session.scalars(
             select(Match)
             .where(player_id == any_(Match.player_ids))
             .order_by(Match.match_creation_time.desc())
+            .offset((page_index - 1) * page_size)
+            .limit(page_size)
         )
     ).all()
 
 
-@app.get("/match_detail/{match_id}/{player_id}", response_model=MatchDetailSchema)
+@app.get(
+    "/match_detail/{match_id}/{player_id}",
+    response_model=MatchDetailSchema,
+)
 async def match_detail(
-    match_id: str, player_id: str, session: Annotated[AsyncSession, Depends(db)]
+    match_id: str,
+    player_id: str,
+    session: Annotated[AsyncSession, Depends(db)],
 ):
-    return (
+    res = (
         await session.scalars(
             select(MatchDetail).where(
                 (MatchDetail.player_id == player_id)
@@ -139,6 +149,7 @@ async def match_detail(
             )
         )
     ).one_or_none()
+    return res
 
 
 @app.get(
@@ -150,6 +161,7 @@ async def leaderboard(
     session: Annotated[AsyncSession, Depends(db)],
     page_index: Annotated[int, Path(ge=1)],
 ):
+    page_size = 100
     total = await session.scalar(
         select(func.count()).select_from(Player).where(Player.region == region)
     )
@@ -168,12 +180,12 @@ async def leaderboard(
             )
             .where(Player.region == region)
             .order_by(Player.lp.desc().nulls_last())
-            .offset((page_index - 1) * LEADERBOARD_PAGE_SIZE)
-            .limit(LEADERBOARD_PAGE_SIZE)
+            .offset((page_index - 1) * page_size)
+            .limit(page_size)
         )
     ).all()
     return LeaderboardPage(
-        items=rows, total=total, page_index=page_index, page_size=LEADERBOARD_PAGE_SIZE
+        items=rows, total=total, page_index=page_index, page_size=page_size
     )
 
 

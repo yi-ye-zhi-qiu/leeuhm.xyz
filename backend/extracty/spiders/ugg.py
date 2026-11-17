@@ -124,10 +124,14 @@ class MatchSpider(Spider):
         async with AsyncSessionLocal.begin() as session:
             players = (
                 await session.execute(
-                    select(
-                        Player.riot_tag_line, Player.riot_user_name, Player.region
-                    ).where(
+                    select(Player.riot_tag_line, Player.riot_user_name, Player.region)
+                    .where(
                         Player.player_id == self.player_id if self.player_id else True
+                    )
+                    .order_by(
+                        Player.tier.asc().nulls_last(),
+                        Player.rank.asc().nulls_last(),
+                        Player.lp.desc().nulls_last(),
                     )
                 )
             ).all()
@@ -200,6 +204,11 @@ class MatchDetailSpider(Spider):
                     MatchDetail.player_id == participants.c.player_id,
                 )
                 .exists()
+            )
+            .order_by(
+                Player.tier.asc().nulls_last(),
+                Player.rank.asc().nulls_last(),
+                Player.lp.desc().nulls_last(),
             )
             .limit(self.n_requests_cap)
         )

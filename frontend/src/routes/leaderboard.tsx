@@ -43,7 +43,10 @@ function LeaderboardData() {
                   height={32}
                   loading="lazy"
                 />
-                <Link to="/player" search={{ playerId: player.player_id }}>
+                <Link
+                  to="/player"
+                  search={{ playerId: player.player_id, pageIndex: 1 }}
+                >
                   {player.riot_user_name}#{player.riot_tag_line}
                 </Link>
               </td>

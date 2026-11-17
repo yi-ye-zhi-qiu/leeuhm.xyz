@@ -26,12 +26,12 @@ function PlayerData() {
 }
 
 function MatchData() {
-  const { playerId } = Route.useSearch();
+  const { playerId, pageIndex } = Route.useSearch();
   const { isPending, error, data } = useQuery({
     queryKey: ["matches", playerId],
     queryFn: () =>
-      fetch(`/api/match/${encodeURIComponent(playerId)}`).then((res) =>
-        res.json(),
+      fetch(`/api/match/${encodeURIComponent(playerId)}/${pageIndex}`).then(
+        (res) => res.json(),
       ),
   });
   if (isPending) return "Loading...";
