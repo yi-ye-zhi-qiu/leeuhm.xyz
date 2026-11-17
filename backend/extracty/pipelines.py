@@ -1,14 +1,13 @@
 import asyncio
 import mimetypes
 from datetime import datetime, timezone
-from pathlib import Path
 
 import boto3
 from extracty.items import AssetItem
 
 
 class RecordCrawledAt:
-    def process_item(self, item, spider):
+    def process_item(self, item):
         item["crawled_at"] = (
             datetime.now(timezone.utc).replace(microsecond=0).isoformat()
         )

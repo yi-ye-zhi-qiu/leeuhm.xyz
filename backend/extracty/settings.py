@@ -1,6 +1,6 @@
-import os
 from pathlib import Path
 
+from config import settings
 from extracty.items import UGGMatchDetailResponse, UGGMatchResponse, UGGPlayerResponse
 
 LOG_LEVEL = "INFO"
@@ -10,43 +10,47 @@ SPIDER_MODULES = ["extracty.spiders"]
 CONCURRENT_REQUESTS = 128
 DOWNLOADER_MIDDLEWARES = {
     "extracty.middlewares.Proxy": 100,
-    "extracty.middlewares.Impersonate": 200,
 }
 ITEM_PIPELINES = {
     "extracty.pipelines.RecordCrawledAt": 100,
     "spidermon.contrib.scrapy.pipelines.ItemValidationPipeline": 800,
 }
-REQUEST_FINGERPRINTER_IMPLEMENTATION = "2.7"
-DOWNLOADER_CLIENT_TLS_METHOD = "TLSv1.2"
-DOWNLOAD_HANDLERS = {
-    "http": "scrapy_impersonate.ImpersonateDownloadHandler",
-    "https": "scrapy_impersonate.ImpersonateDownloadHandler",
-}
-USER_AGENT = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Mobile Safari/537.36"
-DEFAULT_REQUEST_HEADERS = {
-    "Accept": "*/*",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Authorization": "",
-    "Content-Type": "application/json",
-    "Dnt": "1",
-    "Origin": "https://u.gg",
-    "Priority": "u=1, i",
-    "Referer": "https://u.gg/lol/leaderboards/ranking?region=na1",
-    "Sec-Ch-Ua": '"Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
-    "Sec-Ch-Ua-Mobile": "?1",
-    "Sec-Ch-Ua-Platform": '"Android"',
-    "Sec-Fetch-Dest": "empty",
-    "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "same-origin",
-    "User-Agent": "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Mobile Safari/537.36",
-    "X-App-Type": "web",
-    "X-App-Version": "43fbbe7cce4c6e5ca7278597788eefbe02e91992",
-}
+# If you want to go the no proxy route, explore Camoufox for humanized behavior:
+# https://scrapy-playwright.readthedocs.io/en/latest/setup.html#setup
+# DOWNLOAD_HANDLERS = {
+#     "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+#     # "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+# }
+# TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
+# PLAYWRIGHT_PROCESS_REQUEST_HEADERS = None
+# PLAYWRIGHT_BROWSER_PROVIDER = "extracty.providers.CamoufoxBrowserProvider"
+# # Camoufox is a firefox browser
+# PLAYWRIGHT_BROWSER_TYPE = "firefox"
+# PLAYWRIGHT_LAUNCH_OPTIONS = {"headless": True, "humanize": True}
 EXTENSIONS = {
     "spidermon.contrib.scrapy.extensions.Spidermon": 500,
 }
+DEFAULT_REQUEST_HEADERS = {
+    "accept": "*/*",
+    "accept-language": "en-US,en;q=0.9",
+    "authorization": "",
+    "content-type": "application/json",
+    "dnt": "1",
+    "origin": "https://u.gg",
+    "priority": "u=1, i",
+    "referer": "https://u.gg/lol/leaderboards/ranking?region=na1&page=49",
+    "sec-ch-ua": '"Not-A.Brand";v="99", "Google Chrome";v="157", "Chromium";v="157"',
+    "sec-ch-ua-mobile": "?1",
+    "sec-ch-ua-platform": '"Android"',
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-origin",
+    "user-agent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+    "x-app-type": "web",
+    "x-app-version": "289fe635ad46ee7b6b830d86b4106d8baafc9371",
+}
 SPIDERMON_ENABLED = True
-SPIDERMON_DISCORD_WEBHOOK_URL = os.environ["DISCORD_WEBHOOK_URL"]
+SPIDERMON_DISCORD_WEBHOOK_URL = settings.discord_webhook_url
 SPIDERMON_MAX_EXECUTION_TIME = 5 * 60  # 5 minutes
 SPIDERMON_MAX_ERRORS_PERIODIC = 100
 SPIDERMON_MAX_ERRORS = 100
@@ -69,17 +73,8 @@ SPIDERMON_VALIDATION_SCHEMAS = {
         Path(__file__).parent / "schemas" / "match_detail.json"
     ),
 }
-SPIDERMON_SPIDER_CLOSE_MONITORS =("extracty.monitors.SpiderCloseMonitorSuite",)
-
-# Assets (e.g. champion icons) are stored in Cloudflare R2, which is S3
-# compatible, in a bucket per environment
-ASSETS_BUCKET = os.environ.get("ASSETS_BUCKET", "espresso-assets-dev")
-# Store assets in a local directory instead, e.g. for testing
-ASSETS_LOCAL_DIR = os.environ.get("ASSETS_LOCAL_DIR")
-R2_ENDPOINT_URL = (
-    f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com"
-    if "R2_ACCOUNT_ID" in os.environ
-    else None
-)
-R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
-R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
+SPIDERMON_SPIDER_CLOSE_MONITORS = ("extracty.monitors.SpiderCloseMonitorSuite",)
+ASSETS_BUCKET = settings.assets_bucket
+R2_ENDPOINT_URL = settings.r2_endpoint_url
+R2_ACCESS_KEY_ID = settings.r2_access_key_id
+R2_SECRET_ACCESS_KEY = settings.r2_secret_access_key

@@ -1,26 +1,42 @@
-import os
-from pydantic_settings import BaseSettings
 from sqlalchemy import URL
+from pydantic import computed_field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    db_username: str  # TODO: comes from secret manager
+    db_username: str
     db_password: str
     pg_host: str
     pg_database: str
-    db_url: URL
+
+    @computed_field
+    @property
+    def db_url(self) -> URL:
+        return URL.create(
+            "postgresql+psycopg",
+            username=self.db_username,
+            password=self.db_password,
+            host=self.pg_host,
+            database=self.pg_database,
+        )
+
+    # Extracty specific settings
+    discord_webhook_url: str
+    r2_secret_access_key: str
+    r2_access_key_id: str
+    r2_account_id: str
+    assets_bucket: str = "espresso-assets-dev"  # TODO: Replace with {ENVIRONMENT}
+    proxy_network_url: str
+
+    @computed_field
+    @property
+    def r2_endpoint_url(self) -> str:
+        return f"https://{self.r2_account_id}.r2.cloudflarestorage.com"
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf8",
+    )
 
 
-settings = Settings(
-    db_username=os.environ["DB_USERNAME"],
-    db_password=os.environ["DB_PASSWORD"],
-    pg_host=os.environ["PG_HOST"],
-    pg_database="leeuhmxyz",
-    db_url=URL.create(
-        "postgresql+psycopg",
-        username=os.environ["DB_USERNAME"],
-        password=os.environ["DB_PASSWORD"],
-        host=os.environ["PG_HOST"],
-        database="leeuhmxyz",
-    ),
-)
+settings = Settings()

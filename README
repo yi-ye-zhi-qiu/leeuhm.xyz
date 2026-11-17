@@ -1,42 +1,35 @@
 ### Architecture
 
-
 ### Quickstart
 
-```bash
-brew update && brew install azure-cli
-az login
+#### Prerequisites:
+
+- Install [uv](https://docs.astral.sh/uv/getting-started/installation/) for package management.
+- Install [postgres](https://formulae.brew.sh/formula/postgresql@16)
+
+#### Spin up locally:
+
+```
+# Create the database
+brew services start postgresql@16
+psql -d postgres -c 'CREATE DATABASE espressogg'
+# Echo into `.env` variables
+# ...
+# Run postgres migrations
+cd backend/
+uv sync --active
+uv run alembic upgrade head
+# Run Terraform infrastructure (remote state, Cloudflare R2)
 cd infra/root/
 terraform init
 terraform apply
 cd ..
-cd crawl/
+cd site_assets/
 terraform init
 terraform workspace new dev
 terraform apply
-
-# Configure GitHub Actions for ACR deployment
-# 1. Fetch the service principal credentials and ACR login server
-APP_CLIENT_ID=$(terraform output -raw app_client_id)
-APP_PASSWORD=$(terraform output -raw app_password)
-ACR_LOGIN_SERVER=$(az acr list --query "[].loginServer" -o tsv)
-gh secret set AZURE_REGISTRY --body "$ACR_LOGIN_SERVER"
-gh secret set AZURE_CLIENT_ID --body "$APP_CLIENT_ID"
-gh secret set AZURE_CLIENT_SECRET --body "$APP_PASSWORD"
-
-# Deploy database utils
-cd infra/db/
-terraform init
-terraform workspace new dev
-terraform apply
-```
-
-### Run crawl local
-
-```bash
-cd crawl/
-set -x AZURE_CONTAINER "<>"
-set -x AZURE_ACCOUNT_URL "<>"
-set -x AZURE_ACCOUNT_KEY "<>"
-scrapy crawl crawl-game-ids
+# Grab some initial data locally
+uv run python3 pipeline/refresh.py
+# Start FastAPI service
+uv run fastapi dev
 ```

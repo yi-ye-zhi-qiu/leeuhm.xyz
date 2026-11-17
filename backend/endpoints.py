@@ -1,20 +1,16 @@
 """Main interface for bronze data, requests/Scrapy are just busses."""
 
-from datetime import time
-import os
-from alembic.context import execute
 import scrapy.http
 import logging
 import requests
-import psycopg2
-from typing import Any, Literal, Optional, Union
+from typing import Any, Optional, Union
 from collections import namedtuple
 from urllib.parse import urlunparse
 
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.sql.functions import now
 
-from db import AsyncSessionLocal
+from database import AsyncSessionLocal
 from exceptions import FailedRequest
 from models import (
     MetricEvent,

@@ -1,13 +1,13 @@
-from db import AsyncSessionLocal
-from sqlalchemy import func, select
-from models import Match, MatchDetail, Player
 from schemas import Region
-from endpoints import UGGMatch, UGGMatchDetail, UGGPlayer
-from extracty.items import UGGMatchDetailResponse, UGGMatchResponse, UGGPlayerResponse
 from scrapy.spiders import Spider
+from sqlalchemy import func, select
+from database import AsyncSessionLocal
+from models import Match, MatchDetail, Player
 from scrapy.http import JsonRequest, Response
-from typing import AsyncIterable, Iterable, Optional
+from typing import AsyncIterable, Optional
+from endpoints import UGGMatch, UGGMatchDetail, UGGPlayer
 from scrapy.utils.reactor import is_asyncio_reactor_installed
+from extracty.items import UGGMatchDetailResponse, UGGMatchResponse, UGGPlayerResponse
 
 
 def record_rows_written(stats, table: str, n_rows: int) -> None:
@@ -52,14 +52,6 @@ class PlayerSpider(Spider):
         *args,
         **kwargs,
     ) -> None:
-        # Check for correct asyncio reactor (allows JA3/Fingerprint impersonation)
-        if not is_asyncio_reactor_installed():
-            raise ValueError(
-                f"{PlayerSpider.__qualname__} requires the asyncio Twisted "
-                f"reactor. Make sure you have it configured in the "
-                f"TWISTED_REACTOR setting. See the asyncio documentation "
-                f"of Scrapy for more information."
-            )
         super(PlayerSpider, self).__init__(*args, **kwargs)
         self.region: Region = Region(REGION)
         self.n_leaderboard_pages = (
@@ -123,8 +115,6 @@ class MatchSpider(Spider):
         *args,
         **kwargs,
     ) -> None:
-        if not is_asyncio_reactor_installed():
-            raise ValueError()
         super(MatchSpider, self).__init__(*args, **kwargs)
         self.player_id = PLAYER_ID
         self.n_games_per_player = N_GAMES_PER_PLAYER or 10
@@ -186,8 +176,6 @@ class MatchDetailSpider(Spider):
         *args,
         **kwargs,
     ) -> None:
-        if not is_asyncio_reactor_installed():
-            raise ValueError()
         super(MatchDetailSpider, self).__init__(*args, **kwargs)
         self.n_requests_cap = int(N_REQUESTS_CAP) if N_REQUESTS_CAP else None
 

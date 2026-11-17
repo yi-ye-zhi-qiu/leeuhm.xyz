@@ -1,5 +1,4 @@
-"""Annontated declarative table configuration of leeuhm.xyz, see `schemas` for
-value types (enums, `Position`) and Pydantic schemas."""
+"""Annontated declarative table configuration of espresso.gg."""
 
 from typing import List, Optional
 from datetime import datetime
@@ -254,9 +253,7 @@ class Match(Base):
     queue_type: Mapped[QueueType]
     region_id: Mapped[Region]
     version: Mapped[GameVersion]
-    # Participants (10 for 5v5), see `make_player_id`. Not a foreign key, as
-    # participants aren't necessarily in `player` if we haven't crawled their
-    # page from a leaderboard.
+    # Participants (10 for 5v5), see `make_player_id`
     player_ids: Mapped[list[str]]
     team_ids: Mapped[List[Team]] = relationship()
     match_details: Mapped[List[MatchDetail]] = relationship()

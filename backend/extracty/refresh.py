@@ -1,36 +1,29 @@
 """
 Essentially orchestration -- nothing fancy here to warrant
 Dagster/Airflow/etc.
+
+This is just sequentially running spiders, as per:
+https://docs.scrapy.org/en/latest/topics/practices.html
+
+Call as a module.
 """
 
-from scrapy.crawler import CrawlerProcess
-from twisted.internet import defer
-from twisted.internet import asyncioreactor
-from scrapy.utils.log import configure_logging
+from scrapy.crawler import AsyncCrawlerRunner
+from scrapy.utils.defer import deferred_f_from_coro_f
 from scrapy.utils.reactor import install_reactor
+from twisted.internet.task import react
 from scrapy.utils.project import get_project_settings
 
-configure_logging()
-settings = get_project_settings()
-process = CrawlerProcess(settings)
 
-# Installation of asyncio reactor as per `CrawlerRunner`
-# https://docs.scrapy.org/en/latest/topics/asyncio.html#installing-the-asyncio-reactor
-reactor = asyncioreactor.AsyncioSelectorReactor()
-install_reactor("twisted.internet.asyncioreactor.AsyncioSelectorReactor")
+from extracty.spiders.ugg import PlayerSpider, MatchSpider, MatchDetailSpider
 
 
-# Sequential run of spiders, one runs after the prior completes
-@defer.inlineCallbacks
-def crawl():
-    yield process.crawl("player-spider", N_LEADERBOARD_PAGES=1)
-    yield process.crawl("match-spider", N_GAMES_PER_PLAYER=1)
-    yield process.crawl("match-detail-spider")
-    # Optionally, refresh site assets
-    # yield process.crawl("community-dragon-spider")
-    process.stop()
+async def crawl(_):
+    runner = AsyncCrawlerRunner(get_project_settings())
+    await runner.crawl(PlayerSpider, REGION="na1", N_LEADERBOARD_PAGES=1000)
+    await runner.crawl(MatchSpider)
+    await runner.crawl(MatchDetailSpider)
 
 
-crawl()
-# reactor.run()  # the script will block here until the last crawl call is finished
-process.start()
+install_reactor()
+react(deferred_f_from_coro_f(crawl))

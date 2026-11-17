@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "alembic>=1.20.0",
+    "camoufox[geoip]>=0.5.9",
     "fastapi[standard]>=0.143.1",
     "jsonlines>=4.0.0",
     "jsonschema>=4.26.0",
@@ -17,7 +18,7 @@ dependencies = [
     "pydantic>=2.14.1",
     "pydantic-settings>=2.16.0",
     "scrapy>=2.19.0",
-    "scrapy-impersonate>=1.10.0",
+    "scrapy-playwright>=0.0.48",
     "spidermon[monitoring]>=1.27.0",
     "sqlalchemy[asyncio]>=2.1.4",
 ]
@@ -26,3 +27,8 @@ dependencies = [
 # An application run from this directory (Scrapy, Alembic, FastAPI), not an
 # installable package
 package = false
+
+[tool.fastapi]
+# Pin the import root to the cwd (backend/) rather than letting the CLI infer it
+# by walking up `__init__.py` files. Run `uv run fastapi dev` from backend/.
+entrypoint = "api.route:app"

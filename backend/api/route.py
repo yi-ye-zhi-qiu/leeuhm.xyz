@@ -1,13 +1,21 @@
-import asyncio
-from contextlib import asynccontextmanager
-from typing import Annotated
+"""
+FastAPI configuration for espresso.gg.
 
+Loosely based off of Corey Schafer's 19 video tutorial series here:
+https://www.youtube.com/watch?v=7AMjmCTumuo&list=PL-osiE80TeTsak-c-QsVeg0YYG_0TeyXI
+https://github.com/CoreyMSchafer/FastAPI-Full-Course
+"""
+
+import asyncio
 import requests
+from typing import Annotated
+from contextlib import asynccontextmanager
+from sqlalchemy import any_, select, func, cast, Numeric
 from fastapi import Depends, FastAPI, HTTPException, Path
-from sqlalchemy import any_, select, func, cast, Float, Numeric
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db import db, engine
+
+from database import db, engine
 from endpoints import UGGMatch, UGGMatchDetail
 from models import Match, MatchDetail, Player
 from schemas import (
@@ -23,6 +31,8 @@ LEADERBOARD_PAGE_SIZE = 100
 
 
 # see: https://fastapi.tiangolo.com/advanced/events/
+# Lifespan is a modern way in FastAPI to handle startup and shutdown
+# events, replaces older @onstartup and @onshutdown decorators.
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Schema is managed by migrations (Alembic) not by app startup
@@ -62,7 +72,7 @@ async def refresh(
     # TODO: replace with Riot API
     player = (
         await session.execute(
-            select(Player.riot_user_name, Player.riot_tag_line).where(
+            (Player.riot_user_name, Player.riot_tag_line).where(
                 (Player.player_id == player_id) & (Player.region == region)
             )
         )

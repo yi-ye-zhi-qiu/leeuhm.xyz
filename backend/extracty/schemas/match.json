@@ -3,19 +3,27 @@
   "title": "u.gg FetchMatchSummaries response",
   "description": "ensures u.gg response <> leeuhm.xyz DB compatibility",
   "type": "object",
-  "required": ["data"],
+  "required": [
+    "data"
+  ],
   "properties": {
     "data": {
       "type": "object",
-      "required": ["fetchPlayerMatchSummaries"],
+      "required": [
+        "fetchPlayerMatchSummaries"
+      ],
       "properties": {
         "fetchPlayerMatchSummaries": {
           "type": "object",
-          "required": ["matchSummaries"],
+          "required": [
+            "matchSummaries"
+          ],
           "properties": {
             "matchSummaries": {
               "type": "array",
-              "items": { "$ref": "#/$defs/matchSummary" }
+              "items": {
+                "$ref": "#/$defs/matchSummary"
+              }
             }
           }
         }
@@ -36,32 +44,68 @@
         "teamB"
       ],
       "properties": {
-        "matchId": { "type": ["integer", "string"] },
-        "matchCreationTime": { "type": "integer" },
-        "matchDuration": { "type": "integer" },
+        "matchId": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "matchCreationTime": {
+          "type": "integer"
+        },
+        "matchDuration": {
+          "type": "integer"
+        },
         "queueType": {
           "description": "`models.QueueType`.",
-          "enum": ["ranked_solo_5x5"]
+          "enum": [
+            "ranked_solo_5x5",
+            "normal_draft_5x5",
+            "aram_5x5",
+            "blind_5x5",
+            "ranked_flex_5x5"
+          ]
         },
         "regionId": {
           "description": "`models.Region`.",
-          "enum": ["na1", "euw", "kr"]
+          "enum": [
+            "na1",
+            "euw",
+            "kr"
+          ]
         },
         "version": {
           "description": "Versions outside `models.GameVersion` are skipped, not rejected.",
           "type": "string"
         },
-        "teamA": { "type": "array", "items": { "$ref": "#/$defs/participant" } },
-        "teamB": { "type": "array", "items": { "$ref": "#/$defs/participant" } }
+        "teamA": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/participant"
+          }
+        },
+        "teamB": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/participant"
+          }
+        }
       }
     },
     "participant": {
       "description": "Parsed into `models.Match.player_ids`.",
       "type": "object",
-      "required": ["riotUserName", "riotTagLine"],
+      "required": [
+        "riotUserName",
+        "riotTagLine"
+      ],
       "properties": {
-        "riotUserName": { "type": "string" },
-        "riotTagLine": { "type": "string" }
+        "riotUserName": {
+          "type": "string"
+        },
+        "riotTagLine": {
+          "type": "string"
+        }
       }
     }
   }
